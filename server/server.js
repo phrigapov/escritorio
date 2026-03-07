@@ -9,7 +9,7 @@ app.use(cors())
 const server = http.createServer(app)
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003"],
     methods: ["GET", "POST"]
   }
 })
@@ -30,8 +30,14 @@ io.on('connection', (socket) => {
       color: data.color
     }
 
-    // Enviar jogadores existentes para o novo jogador
-    socket.emit('current-players', players)
+    // Enviar jogadores existentes para o novo jogador (excluindo ele mesmo)
+    const otherPlayers = {}
+    Object.keys(players).forEach(id => {
+      if (id !== socket.id) {
+        otherPlayers[id] = players[id]
+      }
+    })
+    socket.emit('current-players', otherPlayers)
 
     // Notificar todos os outros jogadores sobre o novo jogador
     socket.broadcast.emit('new-player', {

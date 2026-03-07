@@ -37,24 +37,24 @@ export default class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    // Carregar sprites de personagens como spritesheets (4 frames cada)
+    // Carregar sprites de personagens como spritesheets
+    // Walk sprites: 256x64 = 4 frames de 64x64
     this.load.spritesheet('character_down', '/sprites/Julia_walk_Foward.png', {
-      frameWidth: 48,
-      frameHeight: 48
+      frameWidth: 64,
+      frameHeight: 64
     })
     this.load.spritesheet('character_up', '/sprites/Julia_walk_Up.png', {
-      frameWidth: 48,
-      frameHeight: 48
+      frameWidth: 64,
+      frameHeight: 64
     })
     this.load.spritesheet('character_left', '/sprites/Julia_walk_Left.png', {
-      frameWidth: 48,
-      frameHeight: 48
+      frameWidth: 64,
+      frameHeight: 64
     })
     this.load.spritesheet('character_right', '/sprites/Julia_walk_Rigth.png', {
-      frameWidth: 48,
-      frameHeight: 48
+      frameWidth: 64,
+      frameHeight: 64
     })
-    this.load.image('character_idle', '/sprites/Julia-Idle.png')
     
     // Carregar sprites de mobília
     this.load.image('desk', '/sprites/desk.png')
@@ -447,9 +447,9 @@ export default class MainScene extends Phaser.Scene {
     if (isMoving) {
       this.player.anims.play(`walk_${this.lastDirection}`, true)
     } else {
-      // Quando parado, usar o primeiro frame da direção atual
+      // Quando parado, usar frame 0 da direção atual
       this.player.anims.stop()
-      this.player.setTexture(`character_${this.lastDirection}`, 0)
+      this.player.setTexture('character_down', 0)
     }
 
     this.playerNameText.setPosition(this.player.x, this.player.y - 25)
