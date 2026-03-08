@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser'
 import { io, Socket } from 'socket.io-client'
+import { MapLoader } from '../MapLoader'
+import type { MapDefinition } from '../types/MapDefinition'
 
 interface Player {
   sprite: Phaser.Physics.Arcade.Sprite
@@ -29,280 +31,109 @@ export default class MainScene extends Phaser.Scene {
   private username!: string
   private playerColor!: number
   private walls!: Phaser.Physics.Arcade.StaticGroup
-  private doors!: Phaser.GameObjects.Group
   private lastDirection: string = 'down'
+  private spawnX: number = 500
+  private spawnY: number = 700
 
   constructor() {
     super('MainScene')
   }
 
   preload() {
-    // Carregar sprites de personagens como spritesheets
-    // Walk sprites: 256x64 = 4 frames de 64x64
-    this.load.spritesheet('character_down', '/sprites/Julia_walk_Foward.png', {
-      frameWidth: 64,
-      frameHeight: 64
-    })
-    this.load.spritesheet('character_up', '/sprites/Julia_walk_Up.png', {
-      frameWidth: 64,
-      frameHeight: 64
-    })
-    this.load.spritesheet('character_left', '/sprites/Julia_walk_Left.png', {
-      frameWidth: 64,
-      frameHeight: 64
-    })
-    this.load.spritesheet('character_right', '/sprites/Julia_walk_Rigth.png', {
-      frameWidth: 64,
-      frameHeight: 64
-    })
-    
-    // Carregar sprites de mobília
-    this.load.image('desk', '/sprites/desk.png')
+    this.load.spritesheet('character_down',  '/sprites/Julia_walk_Foward.png', { frameWidth: 64, frameHeight: 64 })
+    this.load.spritesheet('character_up',    '/sprites/Julia_walk_Up.png',     { frameWidth: 64, frameHeight: 64 })
+    this.load.spritesheet('character_left',  '/sprites/Julia_walk_Left.png',   { frameWidth: 64, frameHeight: 64 })
+    this.load.spritesheet('character_right', '/sprites/Julia_walk_Rigth.png',  { frameWidth: 64, frameHeight: 64 })
+
+    this.load.image('desk',       '/sprites/desk.png')
     this.load.image('desk-with-pc', '/sprites/desk-with-pc.png')
-    this.load.image('chair', '/sprites/Chair.png')
-    this.load.image('plant', '/sprites/plant.png')
-    this.load.image('coffee', '/sprites/coffee-maker.png')
-    this.load.image('water', '/sprites/water-cooler.png')
-    this.load.image('cabinet', '/sprites/cabinet.png')
-    this.load.image('printer', '/sprites/printer.png')
-    this.load.image('pc1', '/sprites/PC1.png')
-    this.load.image('pc2', '/sprites/PC2.png')
-    this.load.image('sofa', '/sprites/stamping-table.png')
-    this.load.image('bookshelf', '/sprites/writing-table.png')
+    this.load.image('chair',      '/sprites/Chair.png')
+    this.load.image('plant',      '/sprites/plant.png')
+    this.load.image('coffee',     '/sprites/coffee-maker.png')
+    this.load.image('water',      '/sprites/water-cooler.png')
+    this.load.image('cabinet',    '/sprites/cabinet.png')
+    this.load.image('printer',    '/sprites/printer.png')
+    this.load.image('pc1',        '/sprites/PC1.png')
+    this.load.image('pc2',        '/sprites/PC2.png')
+    this.load.image('sofa',       '/sprites/stamping-table.png')
+    this.load.image('bookshelf',  '/sprites/writing-table.png')
     this.load.image('partition1', '/sprites/office-partitions-1.png')
     this.load.image('partition2', '/sprites/office-partitions-2.png')
-    this.load.image('sink', '/sprites/sink.png')
-    this.load.image('trash', '/sprites/Trash.png')
+    this.load.image('sink',       '/sprites/sink.png')
+    this.load.image('trash',      '/sprites/Trash.png')
+
+    // Definição do mapa em JSON
+    this.load.json('map', '/maps/office-map.json')
   }
 
-  private createMissingAssets() {
+  /** Gera texturas procedurais usadas como objetos de mobília */
+  private createProceduralAssets() {
     const g = this.make.graphics({ x: 0, y: 0 })
-    
-    // Monitor
-    g.clear()
-    g.fillStyle(0x2c3e50, 1)
-    g.fillRect(4, 2, 24, 20)
-    g.fillStyle(0x3498db, 0.6)
-    g.fillRect(6, 4, 20, 16)
-    g.fillStyle(0x2c2c2c, 1)
-    g.fillRect(10, 22, 12, 2)
+
+    g.fillStyle(0x2c3e50, 1).fillRect(4, 2, 24, 20)
+    g.fillStyle(0x3498db, 0.6).fillRect(6, 4, 20, 16)
+    g.fillStyle(0x2c2c2c, 1).fillRect(10, 22, 12, 2)
     g.generateTexture('monitor', 32, 28)
-    
-    // Keyboard
-    g.clear()
-    g.fillStyle(0x2c2c2c, 1)
-    g.fillRect(0, 0, 24, 10)
+
+    g.clear().fillStyle(0x2c2c2c, 1).fillRect(0, 0, 24, 10)
     g.generateTexture('keyboard', 24, 10)
-    
-    // Mouse
-    g.clear()
-    g.fillStyle(0x3c3c3c, 1)
-    g.fillEllipse(6, 8, 10, 14)
+
+    g.clear().fillStyle(0x3c3c3c, 1).fillEllipse(6, 8, 10, 14)
     g.generateTexture('mouse', 12, 16)
-    
-    // Meeting Table
-    g.clear()
-    g.fillStyle(0x654321, 1)
-    g.fillEllipse(64, 48, 120, 80)
+
+    g.clear().fillStyle(0x654321, 1).fillEllipse(64, 48, 120, 80)
     g.generateTexture('meetingTable', 128, 96)
-    
+
     g.destroy()
   }
 
   create() {
-    // Criar assets procedurais faltantes primeiro
-    this.createMissingAssets()
-    
+    this.createProceduralAssets()
+
     this.username = this.registry.get('username') || 'Jogador'
     this.playerColor = Math.random() * 0xffffff
 
-    // Criar grupos de física
     this.walls = this.physics.add.staticGroup()
-    this.doors = this.add.group()
 
-    // Criar animações de personagem
     this.createAnimations()
 
-    // Criar o escritório
-    this.createOffice()
+    // Carrega e renderiza o mapa a partir do JSON
+    const mapData = this.cache.json.get('map') as MapDefinition
+    const loader = new MapLoader(this, this.walls)
+    const { worldWidth, worldHeight, spawnX, spawnY } = loader.load(mapData)
 
-    // Conectar ao servidor
+    this.spawnX = spawnX
+    this.spawnY = spawnY
+
+    this.physics.world.setBounds(0, 0, worldWidth, worldHeight)
+    this.cameras.main.setBounds(0, 0, worldWidth, worldHeight)
+
     this.socket = io('http://localhost:3001')
 
-    // Criar o jogador local
     this.createPlayer()
-
-    // Configurar controles
     this.setupControls()
-
-    // Configurar eventos de rede
     this.setupNetworkEvents()
 
-    // Informar ao servidor que o jogador entrou
     this.socket.emit('player-joined', {
       username: this.username,
       x: this.player.x,
       y: this.player.y,
-      color: this.playerColor
+      color: this.playerColor,
     })
 
-    // Adicionar HUD
     this.createHUD()
   }
 
   private createAnimations() {
-    // Criar animações para todas as direções
     const directions = ['down', 'up', 'left', 'right']
-    
     directions.forEach(direction => {
       this.anims.create({
         key: `walk_${direction}`,
         frames: this.anims.generateFrameNumbers(`character_${direction}`, { start: 0, end: 3 }),
         frameRate: 10,
-        repeat: -1
+        repeat: -1,
       })
     })
-  }
-
-  private createOffice() {
-    const width = 2000
-    const height = 1500
-
-    // Floor
-    for (let x = 0; x < width; x += 100) {
-      for (let y = 0; y < height; y += 100) {
-        const shade = ((x + y) % 200 === 0) ? 0xe8e8e8 : 0xf5f5f5
-        this.add.rectangle(x + 50, y + 50, 100, 100, shade).setDepth(0)
-      }
-    }
-
-    // Walls
-    this.createWall(width / 2, 10, width, 20)
-    this.createWall(width / 2, height - 10, width, 20)
-    this.createWall(10, height / 2, 20, height)
-    this.createWall(width - 10, height / 2, 20, height)
-
-    // Create rooms
-    this.createWorkArea()
-    this.createMeetingRoom()
-    this.createCoffeeRoom()
-    this.createPrivateOffice()
-    this.decorateCorridor()
-
-    // World bounds
-    this.physics.world.setBounds(0, 0, width, height)
-    this.cameras.main.setBounds(0, 0, width, height)
-  }
-
-  private createWall(x: number, y: number, width: number, height: number, color: number = 0x3e2723) {
-    const wall = this.add.rectangle(x, y, width, height, color)
-    this.walls.add(wall)
-    const body = wall.body as Phaser.Physics.Arcade.StaticBody
-    if (body) body.updateFromGameObject()
-  }
-
-  private createWorkArea() {
-    const positions = [
-      [250, 300], [450, 300], [650, 300],
-      [250, 500], [450, 500], [650, 500],
-      [250, 700], [450, 700], [650, 700],
-      [250, 900], [450, 900], [650, 900]
-    ]
-
-    positions.forEach(([x, y]) => {
-      this.add.image(x, y, 'desk').setDepth(2)
-      this.add.image(x, y - 10, 'monitor').setDepth(3)
-      this.add.image(x, y + 10, 'keyboard').setDepth(3)
-      this.add.image(x + 18, y + 12, 'mouse').setDepth(3)
-      this.add.image(x, y + 50, 'chair').setDepth(1)
-    })
-
-    // Plants
-    this.add.image(150, 250, 'plant').setDepth(5)
-    this.add.image(750, 250, 'plant').setDepth(5)
-  }
-
-  private createMeetingRoom() {
-    const roomX = 1600
-    const roomY = 300
-    const roomWidth = 350
-    const roomHeight = 400
-
-    this.add.rectangle(roomX, roomY, roomWidth, roomHeight, 0xdcdcdc).setDepth(1)
-    this.createWall(roomX, roomY - roomHeight/2 + 10, roomWidth, 20)
-    this.createWall(roomX, roomY + roomHeight/2 - 10, roomWidth, 20)
-    this.createWall(roomX + roomWidth/2 - 10, roomY, 20, roomHeight)
-    this.createWall(roomX - roomWidth/2 + 10, roomY - 120, 20, 140)
-    this.createWall(roomX - roomWidth/2 + 10, roomY + 120, 20, 140)
-    
-    this.createDoor(roomX - roomWidth/2 + 10, roomY, '📊 Reunião')
-
-    this.add.image(roomX, roomY, 'meetingTable').setDepth(2)
-    
-    const chairPositions = [
-      [roomX - 70, roomY - 60], [roomX, roomY - 80], [roomX + 70, roomY - 60],
-      [roomX - 70, roomY + 60], [roomX, roomY + 80], [roomX + 70, roomY + 60]
-    ]
-    chairPositions.forEach(([x, y]) => {
-      this.add.image(x, y, 'chair').setDepth(3)
-    })
-  }
-
-  private createCoffeeRoom() {
-    const roomX = 1650
-    const roomY = 900
-    const roomWidth = 300
-    const roomHeight = 400
-
-    this.add.rectangle(roomX, roomY, roomWidth, roomHeight, 0xe8d4b0).setDepth(1)
-    this.createWall(roomX, roomY - roomHeight/2 + 10, roomWidth, 20)
-    this.createWall(roomX, roomY + roomHeight/2 - 10, roomWidth, 20)
-    this.createWall(roomX + roomWidth/2 - 10, roomY, 20, roomHeight)
-    this.createWall(roomX - roomWidth/2 + 10, roomY - 120, 20, 140)
-    this.createWall(roomX - roomWidth/2 + 10, roomY + 120, 20, 140)
-    
-    this.createDoor(roomX - roomWidth/2 + 10, roomY, '☕ Café')
-
-    this.add.image(roomX - 100, roomY - 130, 'coffee').setDepth(2)
-    this.add.image(roomX, roomY + 100, 'sofa').setDepth(2)
-    this.add.image(roomX - 120, roomY + 150, 'plant').setDepth(2)
-  }
-
-  private createPrivateOffice() {
-    const roomX = 250
-    const roomY = 150
-    const roomWidth = 300
-    const roomHeight = 250
-
-    this.add.rectangle(roomX, roomY, roomWidth, roomHeight, 0xfaf0e6).setDepth(1)
-    this.createWall(roomX, roomY - roomHeight/2 + 10, roomWidth, 20)
-    this.createWall(roomX - roomWidth/2 + 10, roomY, 20, roomHeight)
-    this.createWall(roomX + roomWidth/2 - 10, roomY, 20, roomHeight)
-    this.createWall(roomX - 80, roomY + roomHeight/2 - 10, 140, 20)
-    this.createWall(roomX + 80, roomY + roomHeight/2 - 10, 140, 20)
-    
-    this.createDoor(roomX, roomY + roomHeight/2 - 10, '🚪 Escritório')
-
-    this.add.image(roomX, roomY + 40, 'desk').setDepth(2).setScale(1.5)
-    this.add.image(roomX - 100, roomY - 60, 'bookshelf').setDepth(2)
-  }
-
-  private decorateCorridor() {
-    for (let y = 300; y < 1200; y += 200) {
-      this.add.image(1000, y, 'plant').setDepth(5)
-    }
-    this.add.image(1000, 600, 'water').setDepth(2)
-  }
-
-  private createDoor(x: number, y: number, label: string) {
-    const door = this.add.rectangle(x, y, 80, 20, 0x8B4513).setDepth(4)
-    const text = this.add.text(x, y - 30, label, {
-      fontSize: '12px',
-      color: '#fff',
-      backgroundColor: '#000',
-      padding: { x: 6, y: 3 }
-    }).setOrigin(0.5).setDepth(10)
-    this.doors.add(door)
   }
 
   private createHUD() {
@@ -310,17 +141,13 @@ export default class MainScene extends Phaser.Scene {
       fontSize: '14px',
       color: '#fff',
       backgroundColor: 'rgba(0,0,0,0.7)',
-      padding: { x: 12, y: 8 }
+      padding: { x: 12, y: 8 },
     }).setScrollFactor(0).setDepth(1000)
   }
 
   private createPlayer() {
-    const startX = 500
-    const startY = 600
-
-    this.player = this.physics.add.sprite(startX, startY, 'character_down')
-    this.player.setFrame(0) // Mostrar apenas o primeiro frame
-    
+    this.player = this.physics.add.sprite(this.spawnX, this.spawnY, 'character_down')
+    this.player.setFrame(0)
     this.player.setCollideWorldBounds(true)
     this.player.setDepth(10)
     this.player.setSize(20, 16)
@@ -331,7 +158,7 @@ export default class MainScene extends Phaser.Scene {
       fontSize: '12px',
       color: '#fff',
       backgroundColor: 'rgba(0,0,0,0.7)',
-      padding: { x: 6, y: 3 }
+      padding: { x: 6, y: 3 },
     }).setOrigin(0.5).setDepth(11)
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
@@ -343,40 +170,26 @@ export default class MainScene extends Phaser.Scene {
       W: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
       A: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
       S: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      D: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D)
+      D: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     }
   }
 
   private setupNetworkEvents() {
     this.socket.on('current-players', (players: Record<string, PlayerData>) => {
       Object.keys(players).forEach(id => {
-        if (id !== this.socket.id) {
-          this.addOtherPlayer(id, players[id])
-        }
+        if (id !== this.socket.id) this.addOtherPlayer(id, players[id])
       })
     })
 
     this.socket.on('new-player', (data: { id: string, playerData: PlayerData }) => {
-      if (data.id !== this.socket.id) {
-        this.addOtherPlayer(data.id, data.playerData)
-      }
+      if (data.id !== this.socket.id) this.addOtherPlayer(data.id, data.playerData)
     })
 
     this.socket.on('player-moved', (data: { id: string, x: number, y: number, direction?: string }) => {
       const otherPlayer = this.otherPlayers.get(data.id)
       if (otherPlayer) {
-        this.tweens.add({
-          targets: otherPlayer.sprite,
-          x: data.x,
-          y: data.y,
-          duration: 50,
-          ease: 'Linear'
-        })
-        
-        // Atualizar animação do outro jogador baseado na direção
-        if (data.direction) {
-          otherPlayer.sprite.anims.play(`walk_${data.direction}`, true)
-        }
+        this.tweens.add({ targets: otherPlayer.sprite, x: data.x, y: data.y, duration: 50, ease: 'Linear' })
+        if (data.direction) otherPlayer.sprite.anims.play(`walk_${data.direction}`, true)
       }
     })
 
@@ -392,7 +205,7 @@ export default class MainScene extends Phaser.Scene {
 
   private addOtherPlayer(id: string, playerData: PlayerData) {
     const sprite = this.physics.add.sprite(playerData.x, playerData.y, 'character_down')
-    sprite.setFrame(0) // Mostrar apenas o primeiro frame
+    sprite.setFrame(0)
     sprite.setDepth(10)
     sprite.setSize(20, 16)
     sprite.setOffset(6, 16)
