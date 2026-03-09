@@ -31,3 +31,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# mapa salvo pelo editor (gerado em runtime)
+/data/map.json
