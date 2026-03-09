@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Chat from './Chat'
 
 interface GameProps {
   username: string
@@ -119,7 +118,6 @@ export default function Game({ username }: GameProps) {
         </div>
       )}
       <div id="game-container" className="game-container" />
-      <Chat username={username} />
     </div>
   )
 }

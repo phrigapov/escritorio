@@ -69,9 +69,29 @@ io.on('connection', (socket) => {
 
   // Mensagem de chat
   socket.on('chat-message', (message) => {
-    console.log(`Chat - ${message.username}: ${message.text}`)
+    const payload = {
+      id: socket.id,
+      username: players[socket.id]?.username || message.username || 'Jogador',
+      text: String(message.text || '').slice(0, 200),
+      timestamp: message.timestamp || Date.now()
+    }
+
+    if (!payload.text.trim()) return
+
+    console.log(`Chat - ${payload.username}: ${payload.text}`)
     // Transmitir mensagem para todos, incluindo o remetente
-    io.emit('chat-message', message)
+    io.emit('chat-message', payload)
+  })
+
+  // Status do jogador
+  socket.on('player-status-changed', (data) => {
+    if (players[socket.id]) {
+      players[socket.id].status = data.status
+    }
+    socket.broadcast.emit('player-status-changed', {
+      id: socket.id,
+      status: data.status
+    })
   })
 
   // Quando um jogador desconecta

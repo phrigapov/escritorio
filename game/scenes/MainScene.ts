@@ -3,9 +3,27 @@ import { io, Socket } from 'socket.io-client'
 import { MapLoader } from '../MapLoader'
 import type { MapDefinition } from '../types/MapDefinition'
 
+type PlayerStatus = 'online' | 'busy' | 'away'
+
+const STATUS_COLORS: Record<PlayerStatus, number> = {
+  online: 0x2ecc71,
+  busy:   0xe74c3c,
+  away:   0xf39c12,
+}
+
+const STATUS_LABELS: Record<PlayerStatus, string> = {
+  online: 'Online',
+  busy:   'Ocupado',
+  away:   'Ausente',
+}
+
 interface Player {
   sprite: Phaser.Physics.Arcade.Sprite
   nameText: Phaser.GameObjects.Text
+  statusDot: Phaser.GameObjects.Graphics
+  status: PlayerStatus
+  chatBubble?: Phaser.GameObjects.Text
+  chatBubbleHideEvent?: Phaser.Time.TimerEvent
 }
 
 interface PlayerData {
@@ -14,6 +32,13 @@ interface PlayerData {
   y: number
   username: string
   color: number
+}
+
+interface ChatMessage {
+  id: string
+  username: string
+  text: string
+  timestamp: number
 }
 
 export default class MainScene extends Phaser.Scene {
@@ -34,6 +59,14 @@ export default class MainScene extends Phaser.Scene {
   private lastDirection: string = 'down'
   private spawnX: number = 500
   private spawnY: number = 700
+  private chatInputElement?: HTMLInputElement
+  private isTyping = false
+  private playerChatBubble?: Phaser.GameObjects.Text
+  private playerChatBubbleHideEvent?: Phaser.Time.TimerEvent
+  private playerStatus: PlayerStatus = 'online'
+  private playerStatusDot!: Phaser.GameObjects.Graphics
+  private menuObjects: Phaser.GameObjects.GameObject[] = []
+  private isMenuOpen = false
 
   constructor() {
     super('MainScene')
@@ -108,7 +141,7 @@ export default class MainScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight)
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight)
 
-    this.socket = io('http://localhost:3001')
+    this.socket = io()
 
     this.createPlayer()
     this.setupControls()
@@ -137,7 +170,7 @@ export default class MainScene extends Phaser.Scene {
   }
 
   private createHUD() {
-    this.add.text(16, 16, '🎮 WASD/Setas para mover', {
+    this.add.text(16, 16, '🎮 WASD/Setas para mover • ↵ Enter para chat', {
       fontSize: '14px',
       color: '#fff',
       backgroundColor: 'rgba(0,0,0,0.7)',
@@ -161,6 +194,19 @@ export default class MainScene extends Phaser.Scene {
       padding: { x: 6, y: 3 },
     }).setOrigin(0.5).setDepth(11)
 
+    this.playerStatusDot = this.add.graphics().setDepth(12)
+    this.drawStatusDot(this.playerStatusDot, this.playerStatus)
+
+    this.player.setInteractive()
+    this.player.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      pointer.event.stopImmediatePropagation()
+      if (this.isMenuOpen) {
+        this.closeCircularMenu()
+      } else {
+        this.openCircularMenu()
+      }
+    })
+
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
   }
 
@@ -172,6 +218,32 @@ export default class MainScene extends Phaser.Scene {
       S: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       D: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     }
+
+    this.createChatInput()
+
+    this.input.keyboard!.on('keydown-ENTER', (event: KeyboardEvent) => {
+      if (event.repeat) return
+
+      if (!this.isTyping) {
+        this.openChatInput()
+        return
+      }
+
+      this.submitChatMessage()
+    })
+
+    this.input.keyboard!.on('keydown-ESC', () => {
+      if (!this.isTyping) return
+      this.closeChatInput()
+    })
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.cleanupChatInput()
+    })
+
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      this.cleanupChatInput()
+    })
   }
 
   private setupNetworkEvents() {
@@ -196,9 +268,32 @@ export default class MainScene extends Phaser.Scene {
     this.socket.on('player-disconnected', (id: string) => {
       const otherPlayer = this.otherPlayers.get(id)
       if (otherPlayer) {
+        otherPlayer.chatBubble?.destroy()
+        otherPlayer.chatBubbleHideEvent?.remove(false)
+        otherPlayer.statusDot.destroy()
         otherPlayer.sprite.destroy()
         otherPlayer.nameText.destroy()
         this.otherPlayers.delete(id)
+      }
+    })
+
+    this.socket.on('player-status-changed', (data: { id: string, status: PlayerStatus }) => {
+      const otherPlayer = this.otherPlayers.get(data.id)
+      if (otherPlayer) {
+        otherPlayer.status = data.status
+        this.drawStatusDot(otherPlayer.statusDot, data.status)
+      }
+    })
+
+    this.socket.on('chat-message', (message: ChatMessage) => {
+      if (message.id === this.socket.id) {
+        this.showOwnChatBubble(message.text)
+        return
+      }
+
+      const otherPlayer = this.otherPlayers.get(message.id)
+      if (otherPlayer) {
+        this.showOtherPlayerChatBubble(otherPlayer, message.text)
       }
     })
   }
@@ -217,7 +312,226 @@ export default class MainScene extends Phaser.Scene {
       padding: { x: 6, y: 3 }
     }).setOrigin(0.5).setDepth(11)
 
-    this.otherPlayers.set(id, { sprite, nameText })
+    const statusDot = this.add.graphics().setDepth(12)
+    this.drawStatusDot(statusDot, 'online')
+
+    this.otherPlayers.set(id, { sprite, nameText, statusDot, status: 'online' })
+  }
+
+  private createChatInput() {
+    if (typeof window === 'undefined') return
+    if (this.chatInputElement) return
+
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.maxLength = 200
+    input.placeholder = 'Digite e pressione Enter...'
+    input.style.position = 'fixed'
+    input.style.left = '50%'
+    input.style.bottom = '28px'
+    input.style.transform = 'translateX(-50%)'
+    input.style.width = 'min(520px, calc(100vw - 32px))'
+    input.style.padding = '12px 14px'
+    input.style.border = '2px solid #667eea'
+    input.style.borderRadius = '12px'
+    input.style.background = 'rgba(255, 255, 255, 0.96)'
+    input.style.fontSize = '16px'
+    input.style.zIndex = '2000'
+    input.style.display = 'none'
+    input.style.outline = 'none'
+    input.style.boxShadow = '0 8px 30px rgba(0,0,0,0.25)'
+
+    document.body.appendChild(input)
+
+    input.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        this.submitChatMessage()
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        this.closeChatInput()
+      }
+    })
+
+    this.chatInputElement = input
+  }
+
+  private openChatInput() {
+    if (!this.chatInputElement) return
+    this.isTyping = true
+    this.input.keyboard!.disableGlobalCapture()
+    this.chatInputElement.style.display = 'block'
+    this.chatInputElement.value = ''
+    this.chatInputElement.focus()
+  }
+
+  private closeChatInput() {
+    if (!this.chatInputElement) return
+    this.isTyping = false
+    this.input.keyboard!.enableGlobalCapture()
+    this.chatInputElement.style.display = 'none'
+    this.chatInputElement.blur()
+  }
+
+  private submitChatMessage() {
+    if (!this.chatInputElement) return
+
+    const text = this.chatInputElement.value.trim()
+    if (!text) {
+      this.closeChatInput()
+      return
+    }
+
+    this.socket.emit('chat-message', {
+      username: this.username,
+      text,
+      timestamp: Date.now(),
+    })
+
+    this.closeChatInput()
+  }
+
+  private cleanupChatInput() {
+    if (!this.chatInputElement) return
+    this.chatInputElement.remove()
+    this.chatInputElement = undefined
+    this.isTyping = false
+  }
+
+  private createBubbleText(x: number, y: number, text: string) {
+    const safeText = text.length > 80 ? `${text.slice(0, 77)}...` : text
+    return this.add.text(x, y, safeText, {
+      fontSize: '12px',
+      color: '#222',
+      backgroundColor: 'rgba(255,255,255,0.95)',
+      padding: { x: 8, y: 5 },
+      wordWrap: { width: 220, useAdvancedWrap: true },
+      align: 'center',
+    })
+      .setOrigin(0.5, 1)
+      .setDepth(30)
+  }
+
+  private showOwnChatBubble(text: string) {
+    this.playerChatBubble?.destroy()
+    this.playerChatBubbleHideEvent?.remove(false)
+
+    this.playerChatBubble = this.createBubbleText(this.player.x, this.player.y - 45, text)
+    this.playerChatBubbleHideEvent = this.time.delayedCall(4000, () => {
+      this.playerChatBubble?.destroy()
+      this.playerChatBubble = undefined
+      this.playerChatBubbleHideEvent = undefined
+    })
+  }
+
+  private showOtherPlayerChatBubble(player: Player, text: string) {
+    player.chatBubble?.destroy()
+    player.chatBubbleHideEvent?.remove(false)
+
+    player.chatBubble = this.createBubbleText(player.sprite.x, player.sprite.y - 45, text)
+    player.chatBubbleHideEvent = this.time.delayedCall(4000, () => {
+      player.chatBubble?.destroy()
+      player.chatBubble = undefined
+      player.chatBubbleHideEvent = undefined
+    })
+  }
+
+  // ── Status dot ──────────────────────────────────────────────────────────────
+
+  private drawStatusDot(g: Phaser.GameObjects.Graphics, status: PlayerStatus) {
+    g.clear()
+    g.fillStyle(STATUS_COLORS[status], 1)
+    g.fillCircle(0, 0, 5)
+    g.lineStyle(1.5, 0xffffff, 0.9)
+    g.strokeCircle(0, 0, 5)
+  }
+
+  // ── Menu circular ───────────────────────────────────────────────────────────
+
+  private openCircularMenu() {
+    if (this.isMenuOpen) return
+    this.isMenuOpen = true
+
+    const px = this.player.x
+    const py = this.player.y
+
+    // Fundo semi-transparente
+    const bg = this.add.graphics()
+    bg.fillStyle(0x000000, 0.45)
+    bg.fillCircle(px, py, 72)
+    bg.setDepth(48)
+    this.menuObjects.push(bg)
+
+    const statuses: PlayerStatus[] = ['online', 'busy', 'away']
+    const angles = [-90, 30, 150]
+
+    statuses.forEach((status, i) => {
+      const rad = Phaser.Math.DegToRad(angles[i])
+      const bx = px + Math.cos(rad) * 55
+      const by = py + Math.sin(rad) * 55
+
+      const isActive = status === this.playerStatus
+
+      const btn = this.add.graphics()
+      btn.fillStyle(STATUS_COLORS[status], 1)
+      btn.fillCircle(0, 0, 22)
+      if (isActive) {
+        btn.lineStyle(3, 0xffffff, 1)
+        btn.strokeCircle(0, 0, 25)
+      }
+      btn.setPosition(bx, by)
+      btn.setDepth(50)
+      btn.setInteractive(
+        new Phaser.Geom.Circle(0, 0, 22),
+        Phaser.Geom.Circle.Contains
+      )
+
+      btn.on('pointerover', () => {
+        btn.clear()
+        btn.fillStyle(STATUS_COLORS[status], 0.85)
+        btn.fillCircle(0, 0, 26)
+        if (isActive) { btn.lineStyle(3, 0xffffff, 1); btn.strokeCircle(0, 0, 28) }
+      })
+      btn.on('pointerout', () => {
+        btn.clear()
+        btn.fillStyle(STATUS_COLORS[status], 1)
+        btn.fillCircle(0, 0, 22)
+        if (isActive) { btn.lineStyle(3, 0xffffff, 1); btn.strokeCircle(0, 0, 25) }
+      })
+      btn.on('pointerdown', () => {
+        this.setPlayerStatus(status)
+        this.closeCircularMenu()
+      })
+      this.menuObjects.push(btn)
+
+      const lbl = this.add.text(bx, by + 31, STATUS_LABELS[status], {
+        fontSize: '10px',
+        color: '#fff',
+        stroke: '#000',
+        strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(52)
+      this.menuObjects.push(lbl)
+    })
+
+    // Fechar ao clicar fora (delay para não fechar no mesmo clique de abertura)
+    this.time.delayedCall(150, () => {
+      this.input.once('pointerdown', () => this.closeCircularMenu())
+    })
+  }
+
+  private closeCircularMenu() {
+    if (!this.isMenuOpen) return
+    this.menuObjects.forEach(o => (o as Phaser.GameObjects.GameObject).destroy())
+    this.menuObjects = []
+    this.isMenuOpen = false
+  }
+
+  private setPlayerStatus(status: PlayerStatus) {
+    this.playerStatus = status
+    this.drawStatusDot(this.playerStatusDot, status)
+    this.socket.emit('player-status-changed', { status })
   }
 
   update() {
@@ -228,24 +542,26 @@ export default class MainScene extends Phaser.Scene {
     let velocityY = 0
     let isMoving = false
 
-    if (this.cursors.left.isDown || this.wasd.A.isDown) {
-      velocityX = -speed
-      this.lastDirection = 'left'
-      isMoving = true
-    } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-      velocityX = speed
-      this.lastDirection = 'right'
-      isMoving = true
-    }
+    if (!this.isTyping && !this.isMenuOpen) {
+      if (this.cursors.left.isDown || this.wasd.A.isDown) {
+        velocityX = -speed
+        this.lastDirection = 'left'
+        isMoving = true
+      } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
+        velocityX = speed
+        this.lastDirection = 'right'
+        isMoving = true
+      }
 
-    if (this.cursors.up.isDown || this.wasd.W.isDown) {
-      velocityY = -speed
-      this.lastDirection = 'up'
-      isMoving = true
-    } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
-      velocityY = speed
-      this.lastDirection = 'down'
-      isMoving = true
+      if (this.cursors.up.isDown || this.wasd.W.isDown) {
+        velocityY = -speed
+        this.lastDirection = 'up'
+        isMoving = true
+      } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
+        velocityY = speed
+        this.lastDirection = 'down'
+        isMoving = true
+      }
     }
 
     if (velocityX !== 0 && velocityY !== 0) {
@@ -266,9 +582,23 @@ export default class MainScene extends Phaser.Scene {
     }
 
     this.playerNameText.setPosition(this.player.x, this.player.y - 25)
+    this.playerStatusDot.setPosition(
+      this.playerNameText.x - this.playerNameText.width / 2 - 9,
+      this.playerNameText.y
+    )
+    if (this.playerChatBubble) {
+      this.playerChatBubble.setPosition(this.player.x, this.player.y - 45)
+    }
 
     this.otherPlayers.forEach(player => {
       player.nameText.setPosition(player.sprite.x, player.sprite.y - 25)
+      player.statusDot.setPosition(
+        player.nameText.x - player.nameText.width / 2 - 9,
+        player.nameText.y
+      )
+      if (player.chatBubble) {
+        player.chatBubble.setPosition(player.sprite.x, player.sprite.y - 45)
+      }
     })
 
     if (isMoving) {

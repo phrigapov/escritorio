@@ -5,8 +5,8 @@
       "id": "escritorio-principal",
       "name": "🏢 Escritório Principal",
       "offset": { "x": 0, "y": 0 },
-      "width": 2000,
-      "height": 1500,
+      "width": 1000,
+      "height": 1000,
       "spawnPoint": { "x": 920, "y": 700 },
       "floor": {
         "tileSize": 100,
