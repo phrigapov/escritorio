@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
+import PerfMonitor from './PerfMonitor'
+import GitHubPanel from './GitHubPanel'
 
 // EditorOverlay só carrega no cliente (usa refs de cena Phaser)
 const EditorOverlay = dynamic(() => import('./EditorOverlay'), { ssr: false })
@@ -16,6 +18,7 @@ export default function Game({ username }: GameProps) {
   const [isLoading, setIsLoading]   = useState(true)
   const [error, setError]           = useState<string | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
+  const [githubOpen, setGithubOpen] = useState(false)
 
   // ── Entrar/sair do editor ──────────────────────────────────────────────────
   const openEditor = useCallback(() => {
@@ -36,8 +39,11 @@ export default function Game({ username }: GameProps) {
     if (!game) return
     game.scene.stop('EditorScene')
     editorSceneRef.current = null
+    // Invalida o cache do mapa para forçar releitura do arquivo salvo pelo editor
+    game.cache.json.remove('map')
     const main = game.scene.getScene('MainScene')
-    main?.scene.resume()
+    // Reinicia a cena (preload → create) em vez de só resumir
+    main?.scene.restart()
     setEditorOpen(false)
   }, [])
 
@@ -48,7 +54,16 @@ export default function Game({ username }: GameProps) {
 
     const initGame = async () => {
       try {
-        const Phaser      = await import('phaser')
+        // Aguarda o Phaser da CDN estar disponível (máx 10s)
+        await new Promise<void>((resolve, reject) => {
+          if ((window as any).Phaser) { resolve(); return }
+          const t = setTimeout(() => reject(new Error('Phaser CDN não carregou')), 10000)
+          const check = setInterval(() => {
+            if ((window as any).Phaser) { clearInterval(check); clearTimeout(t); resolve() }
+          }, 50)
+        })
+
+        const Phaser      = (window as any).Phaser as typeof import('phaser')
         const MainScene   = (await import('@/game/scenes/MainScene')).default
         const { default: EditorScene } = await import('@/game/scenes/EditorScene')
 
@@ -97,13 +112,16 @@ export default function Game({ username }: GameProps) {
     }
   }, [username])
 
-  // ── Atalho de teclado E ───────────────────────────────────────────────────
+  // ── Atalhos de teclado ────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // não abrir editor se estiver digitando em algum input
+      // não abrir painéis se estiver digitando em algum input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (e.key === 'e' || e.key === 'E') {
         editorOpen ? closeEditor() : openEditor()
+      }
+      if (e.key === 'g' || e.key === 'G') {
+        setGithubOpen(o => !o)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -139,28 +157,55 @@ export default function Game({ username }: GameProps) {
 
       <div id="game-container" className="game-container" />
 
-      {/* Botão flutuante para abrir/fechar editor */}
+      {/* Botões flutuantes (canto inferior direito) */}
       {!isLoading && (
-        <button
-          onClick={editorOpen ? closeEditor : openEditor}
-          title="Modo Editor (E)"
-          style={{
-            position: 'fixed', bottom: 20, right: 20,
-            background: editorOpen ? '#c0392b' : '#2980b9',
-            border: 'none', color: '#fff', borderRadius: 8,
-            padding: '8px 14px', fontSize: 13, cursor: 'pointer',
-            zIndex: 1400, boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-            transition: 'background 0.2s',
-          }}
-        >
-          {editorOpen ? '✕ Fechar Editor' : '🗺 Editor (E)'}
-        </button>
+        <div style={{
+          position: 'fixed', bottom: 20, right: 20,
+          display: 'flex', flexDirection: 'column', gap: 8,
+          zIndex: 1400,
+        }}>
+          <button
+            onClick={() => setGithubOpen(o => !o)}
+            title="GitHub (G)"
+            style={{
+              background: githubOpen ? '#1a3a1a' : '#24292f',
+              border: `1px solid ${githubOpen ? '#4ade80' : '#444'}`,
+              color: '#fff', borderRadius: 8,
+              padding: '8px 14px', fontSize: 13, cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+              transition: 'background 0.2s',
+            }}
+          >
+            {githubOpen ? '✕ GitHub' : '🐙 GitHub (G)'}
+          </button>
+          <button
+            onClick={editorOpen ? closeEditor : openEditor}
+            title="Modo Editor (E)"
+            style={{
+              background: editorOpen ? '#c0392b' : '#2980b9',
+              border: 'none', color: '#fff', borderRadius: 8,
+              padding: '8px 14px', fontSize: 13, cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+              transition: 'background 0.2s',
+            }}
+          >
+            {editorOpen ? '✕ Fechar Editor' : '🗺 Editor (E)'}
+          </button>
+        </div>
       )}
 
       {/* Painel lateral do editor */}
       {editorOpen && (
         <EditorOverlay sceneRef={editorSceneRef} onClose={closeEditor} />
       )}
+
+      {/* Painel lateral do GitHub */}
+      {!isLoading && githubOpen && (
+        <GitHubPanel onClose={() => setGithubOpen(false)} />
+      )}
+
+      {/* Monitor de desempenho — sempre visível após o jogo carregar */}
+      {!isLoading && <PerfMonitor />}
     </div>
   )
 }

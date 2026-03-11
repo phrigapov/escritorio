@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node custom-server.js",
-    "build": "next build",
-    "start": "NODE_ENV=production node custom-server.js",
+    "dev": "NODE_OPTIONS='--max-old-space-size=1400' node custom-server.js",
+    "build": "NODE_OPTIONS='--max-old-space-size=1400' next build",
+    "start": "NODE_ENV=production NODE_OPTIONS='--max-old-space-size=1400' node custom-server.js",
     "lint": "next lint"
   },
   "dependencies": {

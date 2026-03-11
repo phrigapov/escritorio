@@ -141,7 +141,12 @@ export default class MainScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight)
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight)
 
-    this.socket = io()
+    // Reutiliza socket existente (se cena foi reiniciada após editor) ou cria novo
+    if (this.socket?.connected) {
+      this.socket.off() // remove listeners antigos antes de registrar novos
+    } else {
+      this.socket = io()
+    }
 
     this.createPlayer()
     this.setupControls()
@@ -155,9 +160,29 @@ export default class MainScene extends Phaser.Scene {
     })
 
     this.createHUD()
+    this.startPingMeasurement()
+  }
+
+  private startPingMeasurement() {
+    this.time.addEvent({
+      delay: 2000,
+      loop: true,
+      callback: () => {
+        if (!this.socket?.connected) return
+        const start = Date.now()
+        this.socket.emit('ping-check', () => {
+          const latency = Date.now() - start
+          window.dispatchEvent(
+            new CustomEvent('perf-ping', { detail: { latency } })
+          )
+        })
+      },
+    })
   }
 
   private createAnimations() {
+    // evita erro se animações já foram criadas (cena reiniciada)
+    if (this.anims.exists('walk_down')) return
     const directions = ['down', 'up', 'left', 'right']
     directions.forEach(direction => {
       this.anims.create({
@@ -167,6 +192,26 @@ export default class MainScene extends Phaser.Scene {
         repeat: -1,
       })
     })
+  }
+
+  // Limpa tudo ao reiniciar/parar a cena (editor, reload)
+  shutdown() {
+    // Remove input DOM do chat
+    if (this.chatInputElement) {
+      this.chatInputElement.remove()
+      this.chatInputElement = undefined
+    }
+    // Destrói sprites de jogadores remotos
+    this.otherPlayers.forEach(p => {
+      p.chatBubble?.destroy()
+      p.chatBubbleHideEvent?.remove(false)
+      p.statusDot.destroy()
+      p.sprite.destroy()
+      p.nameText.destroy()
+    })
+    this.otherPlayers.clear()
+    // Não desconecta o socket aqui — o servidor detecta reconexão pelo username
+    // e remove entradas duplicadas automaticamente
   }
 
   private createHUD() {
@@ -299,6 +344,8 @@ export default class MainScene extends Phaser.Scene {
   }
 
   private addOtherPlayer(id: string, playerData: PlayerData) {
+    // Evita duplicata se o evento chegar mais de uma vez
+    if (this.otherPlayers.has(id)) return
     const sprite = this.physics.add.sprite(playerData.x, playerData.y, 'character_down')
     sprite.setFrame(0)
     sprite.setDepth(10)

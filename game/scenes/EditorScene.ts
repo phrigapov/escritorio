@@ -1,103 +1,117 @@
-import Phaser from 'phaser'
+import * as Phaser from 'phaser'
+import type { MapDefinition, RoomDefinition, ObjectDefinition } from '../types/MapDefinition'
 
-// ── Constantes ────────────────────────────────────────────────────────────────
+// ── Tipos exportados ──────────────────────────────────────────────────────────
 
-const TILE = 32
+export type EditorTool = 'select' | 'add-object' | 'add-room' | 'spawn' | 'delete'
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
+export type SelectedEditorItem =
+  | { kind: 'space-obj'; si: number; oi: number }
+  | { kind: 'room-obj';  si: number; ri: number; oi: number }
+  | { kind: 'room';      si: number; ri: number }
 
-export type FloorTile = { x: number; y: number; tile: string }
-export type FurnitureItem = { id: string; type: string; x: number; y: number }
-export type Room = { id: string; name: string; x: number; y: number; w: number; h: number; color: string }
+// ── Catálogo visual de objetos ────────────────────────────────────────────────
 
-export interface EditorMapData {
-  tileSize: number
-  width: number
-  height: number
-  floors: FloorTile[]
-  furniture: FurnitureItem[]
-  rooms: Room[]
+export const OBJ_INFO: Record<string, { w: number; h: number; color: number; label: string }> = {
+  workstation:    { w: 64,  h: 70,  color: 0x2c3e50, label: 'WS'       },
+  desk:           { w: 64,  h: 48,  color: 0x8B6914, label: 'Mesa'     },
+  'desk-with-pc': { w: 80,  h: 48,  color: 0x5d4037, label: 'PC-Desk'  },
+  chair:          { w: 28,  h: 28,  color: 0x4a90d9, label: 'Cadeira'  },
+  sofa:           { w: 80,  h: 48,  color: 0x9b59b6, label: 'Sofá'     },
+  plant:          { w: 32,  h: 32,  color: 0x2ecc71, label: 'Planta'   },
+  bookshelf:      { w: 32,  h: 64,  color: 0x795548, label: 'Estante'  },
+  meetingTable:   { w: 128, h: 96,  color: 0xa0522d, label: 'Mesa Reun.' },
+  coffee:         { w: 40,  h: 28,  color: 0x607d8b, label: 'Café'     },
+  printer:        { w: 40,  h: 28,  color: 0x546e7a, label: 'Impressora' },
+  water:          { w: 24,  h: 48,  color: 0x29b6f6, label: 'Água'     },
+  cabinet:        { w: 36,  h: 64,  color: 0x6d4c41, label: 'Arquivo'  },
+  trash:          { w: 24,  h: 24,  color: 0x757575, label: 'Lixo'     },
+  sink:           { w: 40,  h: 36,  color: 0x00acc1, label: 'Pia'      },
+  partition1:     { w: 16,  h: 80,  color: 0x78909c, label: '|'        },
+  partition2:     { w: 80,  h: 16,  color: 0x78909c, label: '─'        },
 }
 
-type Tool = 'select' | 'floor' | 'erase-floor' | 'room' | 'furniture' | 'erase-furniture'
+const OBJ_DEFAULT = { w: 36, h: 36, color: 0x888888, label: '?' }
+function objInfo(type: string) { return OBJ_INFO[type] ?? OBJ_DEFAULT }
 
-// ── Catálogo de pisos ─────────────────────────────────────────────────────────
-
-export const FLOOR_TYPES: { key: string; label: string; color: number }[] = [
-  { key: 'wood',    label: '🪵 Madeira',  color: 0xc8a96e },
-  { key: 'carpet',  label: '🟣 Carpete',  color: 0x7b68ee },
-  { key: 'tile',    label: '⬜ Cerâmica', color: 0xd0d0d0 },
-  { key: 'grass',   label: '🟢 Grama',    color: 0x6dbf67 },
-  { key: 'concrete',label: '🔲 Concreto', color: 0x8e9eab },
+export const OBJECT_CATALOG: { type: string; label: string }[] = [
+  { type: 'workstation',  label: '🖥 Workstation'    },
+  { type: 'desk',         label: '📦 Mesa'           },
+  { type: 'chair',        label: '🪑 Cadeira'        },
+  { type: 'sofa',         label: '🛋 Sofá'           },
+  { type: 'plant',        label: '🌿 Planta'         },
+  { type: 'bookshelf',    label: '📚 Estante'        },
+  { type: 'meetingTable', label: '🏓 Mesa Reunião'   },
+  { type: 'coffee',       label: '☕ Café'           },
+  { type: 'printer',      label: '🖨 Impressora'     },
+  { type: 'water',        label: '💧 Bebedouro'      },
+  { type: 'cabinet',      label: '🗄 Arquivo'        },
+  { type: 'trash',        label: '🗑 Lixeira'        },
 ]
 
-// ── Catálogo de móveis ────────────────────────────────────────────────────────
+// ── Hit area ──────────────────────────────────────────────────────────────────
 
-export const FURNITURE_CATALOG: {
-  type: string; label: string; color: number; w: number; h: number
-}[] = [
-  { type: 'desk',       label: '🖥 Mesa de Trabalho', color: 0x8B6914, w: 3, h: 2 },
-  { type: 'chair',      label: '🪑 Cadeira',           color: 0x4a90d9, w: 1, h: 1 },
-  { type: 'sofa',       label: '🛋 Sofá',              color: 0x9b59b6, w: 3, h: 2 },
-  { type: 'plant',      label: '🌿 Planta',            color: 0x2ecc71, w: 1, h: 1 },
-  { type: 'bookshelf',  label: '📚 Estante',           color: 0x795548, w: 1, h: 3 },
-  { type: 'whiteboard', label: '📋 Quadro Branco',     color: 0xecf0f1, w: 3, h: 1 },
-  { type: 'table',      label: '🪵 Mesa de Reunião',   color: 0xa0522d, w: 4, h: 3 },
-  { type: 'coffee',     label: '☕ Máquina de Café',   color: 0x607d8b, w: 2, h: 1 },
-  { type: 'printer',    label: '🖨 Impressora',        color: 0x546e7a, w: 2, h: 1 },
-  { type: 'water',      label: '💧 Bebedouro',         color: 0x29b6f6, w: 1, h: 2 },
-]
-
-const ROOM_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#16a085']
+interface HitArea {
+  wx: number; wy: number  // world center
+  hw: number; hh: number  // half extents
+  item: SelectedEditorItem
+  zOrder: number
+}
 
 // ── Cena ──────────────────────────────────────────────────────────────────────
 
 export default class EditorScene extends Phaser.Scene {
 
-  // dados
-  private mapData!: EditorMapData
+  private mapData!: MapDefinition
 
   // ferramenta ativa
-  private activeTool: Tool = 'select'
-  private activeFloor = FLOOR_TYPES[0]
-  private activeFurniture = FURNITURE_CATALOG[0]
+  private activeTool: EditorTool = 'select'
+  private activeObjectType = 'workstation'
 
-  // camadas
-  private floorLayer!: Phaser.GameObjects.Graphics
-  private roomLayer!: Phaser.GameObjects.Graphics
-  private furnitureLayer!: Phaser.GameObjects.Graphics
-  private gridLayer!: Phaser.GameObjects.Graphics
-  private cursorLayer!: Phaser.GameObjects.Graphics
+  // camadas gráficas
+  private bgLayer!:          Phaser.GameObjects.Graphics
+  private roomLayer!:        Phaser.GameObjects.Graphics
+  private objLayer!:         Phaser.GameObjects.Graphics
+  private selLayer!:         Phaser.GameObjects.Graphics
+  private spawnLayer!:       Phaser.GameObjects.Graphics
+  private cursorLayer!:      Phaser.GameObjects.Graphics
   private roomPreviewLayer!: Phaser.GameObjects.Graphics
 
-  // labels (text objects)
-  private furnitureLabels: Phaser.GameObjects.Text[] = []
-  private roomLabels: Phaser.GameObjects.Text[] = []
+  // labels/text criados a cada redraw
+  private labels: Phaser.GameObjects.Text[] = []
 
-  // interação — arrastar móvel
+  // seleção e arraste
+  private selectedItem: SelectedEditorItem | null = null
   private isDragging = false
-  private dragTarget: FurnitureItem | null = null
   private dragOffX = 0
   private dragOffY = 0
 
-  // interação — pintura de piso
-  private isPainting = false
-
-  // interação — desenhar sala
+  // desenhar sala
   private isDrawingRoom = false
-  private roomStart: { tx: number; ty: number } | null = null
+  private roomDrawSi = 0
+  private roomDrawStart = { wx: 0, wy: 0 }
 
-  // câmera pan com botão direito
-  private isPanning = false
-  private panStart = { x: 0, y: 0 }
-  private panScrollStart = { x: 0, y: 0 }
+  // pan câmera — controlado no update() via activePointer.rightButtonDown()
+  private _panActive  = false
+  private _panStartX  = 0
+  private _panStartY  = 0
+  private _panScrollX = 0
+  private _panScrollY = 0
 
-  // autosave debounce
+  // hit areas reconstruídas a cada redraw
+  private hitAreas: HitArea[] = []
+
+  // autosave
   private saveTimer: ReturnType<typeof setTimeout> | null = null
 
-  constructor() {
-    super({ key: 'EditorScene' })
-  }
+  // bloqueio do menu de contexto (botão direito = pan)
+  private _noCtxMenu = (e: MouseEvent) => e.preventDefault()
+
+  // dimensões do mundo
+  private worldW = 2000
+  private worldH = 3000
+
+  constructor() { super({ key: 'EditorScene' }) }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -105,112 +119,299 @@ export default class EditorScene extends Phaser.Scene {
     const res = await fetch('/api/map')
     this.mapData = await res.json()
 
-    const W = this.mapData.width * TILE
-    const H = this.mapData.height * TILE
+    this.computeWorldBounds()
+
+    // Recuar o viewport para não ficar sob o painel lateral (270px)
+    const panelW = 270
+    const gw = this.game.scale.width
+    const gh = this.game.scale.height
+    this.cameras.main.setViewport(panelW, 0, gw - panelW, gh)
 
     this.cameras.main.setBackgroundColor('#111122')
-    this.cameras.main.setBounds(0, 0, W, H)
-    this.cameras.main.setZoom(1)
+    this.cameras.main.setBounds(-100, -100, this.worldW + 200, this.worldH + 200)
+    this.cameras.main.setZoom(0.28)
+    this.cameras.main.centerOn(this.worldW / 2, this.worldH / 2)
 
-    // criar camadas na ordem certa
-    this.floorLayer       = this.add.graphics().setDepth(0)
-    this.roomLayer        = this.add.graphics().setDepth(1)
-    this.furnitureLayer   = this.add.graphics().setDepth(2)
-    this.gridLayer        = this.add.graphics().setDepth(3)
+    this.bgLayer          = this.add.graphics().setDepth(0)
+    this.roomLayer        = this.add.graphics().setDepth(2)
+    this.objLayer         = this.add.graphics().setDepth(4)
+    this.selLayer         = this.add.graphics().setDepth(6)
+    this.spawnLayer       = this.add.graphics().setDepth(7)
     this.cursorLayer      = this.add.graphics().setDepth(10)
     this.roomPreviewLayer = this.add.graphics().setDepth(11)
 
+    this.game.canvas.addEventListener('contextmenu', this._noCtxMenu)
     this.redrawAll()
     this.setupInput()
+    // avisa o overlay que os dados já estão prontos
+    this.events.emit('scene-ready')
   }
 
   shutdown() {
-    document.getElementById('editor-overlay')?.remove()
     if (this.saveTimer) clearTimeout(this.saveTimer)
+    this.game.canvas.removeEventListener('contextmenu', this._noCtxMenu)
+    // Restaurar viewport completo para a MainScene
+    const gw = this.game.scale.width
+    const gh = this.game.scale.height
+    this.cameras.main.setViewport(0, 0, gw, gh)
   }
 
-  // ── Redesenho ─────────────────────────────────────────────────────────────
+  update() {
+    const pointer = this.input.activePointer
+    const cam     = this.cameras.main
+    if (pointer.rightButtonDown()) {
+      if (!this._panActive) {
+        this._panActive  = true
+        this._panStartX  = pointer.x
+        this._panStartY  = pointer.y
+        this._panScrollX = cam.scrollX
+        this._panScrollY = cam.scrollY
+      } else {
+        cam.scrollX = this._panScrollX - (pointer.x - this._panStartX) / cam.zoom
+        cam.scrollY = this._panScrollY - (pointer.y - this._panStartY) / cam.zoom
+      }
+    } else {
+      this._panActive = false
+    }
+  }
+
+  // ── Bounds ───────────────────────────────────────────────────────────────────
+
+  private computeWorldBounds() {
+    let maxX = 200, maxY = 200
+    for (const space of this.mapData.spaces) {
+      const ox = space.offset?.x ?? 0
+      const oy = space.offset?.y ?? 0
+      maxX = Math.max(maxX, ox + space.width)
+      maxY = Math.max(maxY, oy + space.height)
+      for (const room of space.rooms ?? []) {
+        maxX = Math.max(maxX, ox + room.x + room.width  / 2 + 20)
+        maxY = Math.max(maxY, oy + room.y + room.height / 2 + 20)
+      }
+    }
+    this.worldW = maxX + 200
+    this.worldH = maxY + 200
+  }
+
+  // ── Redraw ────────────────────────────────────────────────────────────────────
 
   private redrawAll() {
-    this.drawGrid()
-    this.drawFloors()
-    this.drawRooms()
-    this.drawFurniture()
+    this.hitAreas = []
+    this.labels.forEach(l => l.destroy())
+    this.labels = []
+    this.bgLayer.clear()
+    this.roomLayer.clear()
+    this.objLayer.clear()
+    this.spawnLayer.clear()
+
+    for (let si = 0; si < this.mapData.spaces.length; si++) {
+      this.drawSpace(si)
+    }
+    this.drawSelectionHighlight()
   }
 
-  private drawGrid() {
-    const g = this.gridLayer
-    g.clear()
-    g.lineStyle(1, 0x333366, 0.5)
-    for (let x = 0; x <= this.mapData.width; x++) {
-      g.moveTo(x * TILE, 0).lineTo(x * TILE, this.mapData.height * TILE)
+  private drawSpace(si: number) {
+    const space = this.mapData.spaces[si]
+    const ox = space.offset?.x ?? 0
+    const oy = space.offset?.y ?? 0
+
+    // Piso xadrez
+    const ts = space.floor?.tileSize ?? 100
+    const cA = this.hexToNum(space.floor?.colorA ?? '#e8e8e8')
+    const cB = this.hexToNum(space.floor?.colorB ?? '#f5f5f5')
+    for (let tx = 0; tx < space.width; tx += ts) {
+      for (let ty = 0; ty < space.height; ty += ts) {
+        const col = (Math.floor(tx / ts) + Math.floor(ty / ts)) % 2 === 0 ? cA : cB
+        this.bgLayer.fillStyle(col, 1)
+        this.bgLayer.fillRect(ox + tx, oy + ty, ts, ts)
+      }
     }
-    for (let y = 0; y <= this.mapData.height; y++) {
-      g.moveTo(0, y * TILE).lineTo(this.mapData.width * TILE, y * TILE)
+
+    // Borda do espaço
+    this.bgLayer.lineStyle(4, 0x5555bb, 1)
+    this.bgLayer.strokeRect(ox, oy, space.width, space.height)
+
+    // Label do espaço
+    this.labels.push(this.add.text(ox + 20, oy + 18, space.name, {
+      fontSize: '20px', color: '#ccccff',
+      backgroundColor: 'rgba(0,0,20,0.7)', padding: { x: 8, y: 4 },
+    }).setDepth(9))
+
+    // Salas
+    for (let ri = 0; ri < (space.rooms?.length ?? 0); ri++) {
+      this.drawRoom(si, ri)
     }
+
+    // Objetos do espaço
+    for (let oi = 0; oi < (space.objects?.length ?? 0); oi++) {
+      const obj = space.objects![oi]
+      this.drawObject(ox + obj.x, oy + obj.y, obj.type, obj.scale ?? 1, { kind: 'space-obj', si, oi }, 1)
+    }
+
+    // Spawn
+    this.drawSpawnMarker(si)
+  }
+
+  private drawRoom(si: number, ri: number) {
+    const space = this.mapData.spaces[si]
+    const room  = space.rooms![ri]
+    const ox    = space.offset?.x ?? 0
+    const oy    = space.offset?.y ?? 0
+    const cx    = ox + room.x
+    const cy    = oy + room.y
+    const rw    = room.width
+    const rh    = room.height
+    const T     = 12
+    const floor = this.hexToNum(room.floorColor ?? '#eeeeee')
+    const wall  = this.hexToNum(room.wallColor  ?? '#5d4037')
+    const door  = room.door
+
+    // Piso da sala
+    this.roomLayer.fillStyle(floor, 1)
+    this.roomLayer.fillRect(cx - rw / 2, cy - rh / 2, rw, rh)
+
+    // Paredes com abertura da porta
+    const drawHWall = (wy: number, doorCx: number | null, doorW: number) => {
+      this.roomLayer.fillStyle(wall, 1)
+      if (!doorCx) {
+        this.roomLayer.fillRect(cx - rw / 2 - T / 2, wy - T / 2, rw + T, T)
+      } else {
+        const x0 = cx - rw / 2 - T / 2
+        const x1 = cx + rw / 2 + T / 2
+        const gl = doorCx - doorW / 2
+        const gr = doorCx + doorW / 2
+        if (gl > x0) this.roomLayer.fillRect(x0, wy - T / 2, gl - x0, T)
+        if (x1 > gr) this.roomLayer.fillRect(gr, wy - T / 2, x1 - gr, T)
+      }
+    }
+
+    const drawVWall = (wx: number, doorCy: number | null, doorW: number) => {
+      this.roomLayer.fillStyle(wall, 1)
+      if (!doorCy) {
+        this.roomLayer.fillRect(wx - T / 2, cy - rh / 2 - T / 2, T, rh + T)
+      } else {
+        const y0 = cy - rh / 2 - T / 2
+        const y1 = cy + rh / 2 + T / 2
+        const gt = doorCy - doorW / 2
+        const gb = doorCy + doorW / 2
+        if (gt > y0) this.roomLayer.fillRect(wx - T / 2, y0, T, gt - y0)
+        if (y1 > gb) this.roomLayer.fillRect(wx - T / 2, gb, T, y1 - gb)
+      }
+    }
+
+    const dw = door?.width ?? 80
+    const dOff = door?.offset ?? 0
+    drawHWall(cy - rh / 2, door?.side === 'top'    ? cx + dOff : null, dw)
+    drawHWall(cy + rh / 2, door?.side === 'bottom' ? cx + dOff : null, dw)
+    drawVWall(cx - rw / 2, door?.side === 'left'   ? cy + dOff : null, dw)
+    drawVWall(cx + rw / 2, door?.side === 'right'  ? cy + dOff : null, dw)
+
+    // Label da sala
+    this.labels.push(this.add.text(cx, cy - rh / 2 + 14, room.name, {
+      fontSize: '12px', color: '#222', fontStyle: 'bold',
+      backgroundColor: 'rgba(255,255,255,0.7)', padding: { x: 5, y: 2 },
+    }).setOrigin(0.5, 0).setDepth(5))
+
+    // Label da porta
+    if (door?.label) {
+      let dlx = cx, dly = cy
+      if (door.side === 'left')   { dlx = cx - rw / 2 - 4; dly = cy + dOff }
+      if (door.side === 'right')  { dlx = cx + rw / 2 + 4; dly = cy + dOff }
+      if (door.side === 'top')    { dlx = cx + dOff;         dly = cy - rh / 2 - 4 }
+      if (door.side === 'bottom') { dlx = cx + dOff;         dly = cy + rh / 2 + 4 }
+      this.labels.push(this.add.text(dlx, dly, door.label, {
+        fontSize: '10px', color: '#fff',
+        backgroundColor: 'rgba(0,0,0,0.65)', padding: { x: 4, y: 2 },
+      }).setOrigin(0.5).setDepth(9))
+    }
+
+    // Hit area da sala (zOrder baixo — atrás dos objetos)
+    this.hitAreas.unshift({ wx: cx, wy: cy, hw: rw / 2, hh: rh / 2, item: { kind: 'room', si, ri }, zOrder: 0 })
+
+    // Objetos da sala
+    for (let oi = 0; oi < (room.objects?.length ?? 0); oi++) {
+      const obj = room.objects![oi]
+      this.drawObject(cx + obj.x, cy + obj.y, obj.type, obj.scale ?? 1, { kind: 'room-obj', si, ri, oi }, 2)
+    }
+  }
+
+  private drawObject(wx: number, wy: number, type: string, scale: number, item: SelectedEditorItem, zOrder: number) {
+    const info = objInfo(type)
+    const w = info.w * scale
+    const h = info.h * scale
+    this.objLayer.fillStyle(info.color, 0.9)
+    this.objLayer.lineStyle(1, 0x000000, 0.5)
+    this.objLayer.fillRect(wx - w / 2, wy - h / 2, w, h)
+    this.objLayer.strokeRect(wx - w / 2, wy - h / 2, w, h)
+    if (w > 22) {
+      this.labels.push(this.add.text(wx, wy, info.label, {
+        fontSize: '9px', color: '#fff', stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(5))
+    }
+    this.hitAreas.push({ wx, wy, hw: w / 2, hh: h / 2, item, zOrder })
+  }
+
+  private drawSpawnMarker(si: number) {
+    const space = this.mapData.spaces[si]
+    const sp    = space.spawnPoint
+    if (!sp) return
+    const ox = space.offset?.x ?? 0
+    const oy = space.offset?.y ?? 0
+    const wx = ox + sp.x
+    const wy = oy + sp.y
+    const g  = this.spawnLayer
+    g.fillStyle(0x00ff88, 0.35)
+    g.fillCircle(wx, wy, 22)
+    g.lineStyle(2, 0x00ff88, 1)
+    g.strokeCircle(wx, wy, 22)
+    g.beginPath()
+    g.moveTo(wx, wy - 14).lineTo(wx, wy + 14)
+    g.moveTo(wx - 8, wy + 4).lineTo(wx, wy + 14).lineTo(wx + 8, wy + 4)
     g.strokePath()
-
-    // borda do mapa
-    g.lineStyle(2, 0x5555aa, 1)
-    g.strokeRect(0, 0, this.mapData.width * TILE, this.mapData.height * TILE)
   }
 
-  private drawFloors() {
-    const g = this.floorLayer
-    g.clear()
-    for (const f of this.mapData.floors) {
-      const ft = FLOOR_TYPES.find(t => t.key === f.tile)
-      const color = ft?.color ?? 0x888888
-      g.fillStyle(color, 1)
-      g.fillRect(f.x * TILE + 1, f.y * TILE + 1, TILE - 2, TILE - 2)
+  private drawSelectionHighlight() {
+    this.selLayer.clear()
+    if (!this.selectedItem) return
+    const b = this.getItemBounds(this.selectedItem)
+    if (!b) return
+    this.selLayer.lineStyle(2, 0xffffff, 1)
+    this.selLayer.fillStyle(0xffffff, 0.18)
+    this.selLayer.fillRect(b.cx - b.hw, b.cy - b.hh, b.hw * 2, b.hh * 2)
+    this.selLayer.strokeRect(b.cx - b.hw, b.cy - b.hh, b.hw * 2, b.hh * 2)
+    const cs = 5
+    for (const [ex, ey] of [
+      [b.cx - b.hw, b.cy - b.hh], [b.cx + b.hw, b.cy - b.hh],
+      [b.cx - b.hw, b.cy + b.hh], [b.cx + b.hw, b.cy + b.hh],
+    ]) {
+      this.selLayer.fillStyle(0xffffff, 1)
+      this.selLayer.fillRect(ex - cs, ey - cs, cs * 2, cs * 2)
     }
   }
 
-  private drawRooms() {
-    const g = this.roomLayer
-    g.clear()
-    this.roomLabels.forEach(l => l.destroy())
-    this.roomLabels = []
-
-    for (const r of this.mapData.rooms) {
-      const c = parseInt(r.color.replace('#', ''), 16)
-      g.lineStyle(2, c, 1)
-      g.fillStyle(c, 0.10)
-      g.fillRect(r.x * TILE, r.y * TILE, r.w * TILE, r.h * TILE)
-      g.strokeRect(r.x * TILE, r.y * TILE, r.w * TILE, r.h * TILE)
-
-      const lbl = this.add.text(r.x * TILE + 6, r.y * TILE + 4, r.name, {
-        fontSize: '11px',
-        color: r.color,
-        fontStyle: 'bold',
-        stroke: '#000',
-        strokeThickness: 3,
-      }).setDepth(4)
-      this.roomLabels.push(lbl)
+  private getItemBounds(item: SelectedEditorItem) {
+    const space = this.mapData.spaces[item.si]
+    const ox = space?.offset?.x ?? 0
+    const oy = space?.offset?.y ?? 0
+    if (item.kind === 'room') {
+      const room = space?.rooms?.[item.ri]
+      if (!room) return null
+      return { cx: ox + room.x, cy: oy + room.y, hw: room.width / 2, hh: room.height / 2 }
     }
-  }
-
-  private drawFurniture() {
-    const g = this.furnitureLayer
-    g.clear()
-    this.furnitureLabels.forEach(l => l.destroy())
-    this.furnitureLabels = []
-
-    for (const f of this.mapData.furniture) {
-      const cat = FURNITURE_CATALOG.find(c => c.type === f.type) ?? FURNITURE_CATALOG[0]
-      g.fillStyle(cat.color, 0.9)
-      g.lineStyle(1, 0x000000, 0.6)
-      g.fillRect(f.x * TILE + 2, f.y * TILE + 2, cat.w * TILE - 4, cat.h * TILE - 4)
-      g.strokeRect(f.x * TILE + 2, f.y * TILE + 2, cat.w * TILE - 4, cat.h * TILE - 4)
-
-      const lbl = this.add.text(f.x * TILE + 4, f.y * TILE + 4, cat.label, {
-        fontSize: '10px',
-        color: '#ffffff',
-        stroke: '#000',
-        strokeThickness: 2,
-      }).setDepth(5)
-      this.furnitureLabels.push(lbl)
+    if (item.kind === 'room-obj') {
+      const room = space?.rooms?.[item.ri]
+      const obj  = room?.objects?.[item.oi]
+      if (!room || !obj) return null
+      const info = objInfo(obj.type); const s = obj.scale ?? 1
+      return { cx: ox + room.x + obj.x, cy: oy + room.y + obj.y, hw: info.w * s / 2, hh: info.h * s / 2 }
     }
+    if (item.kind === 'space-obj') {
+      const obj = space?.objects?.[item.oi]
+      if (!obj) return null
+      const info = objInfo(obj.type); const s = obj.scale ?? 1
+      return { cx: ox + obj.x, cy: oy + obj.y, hw: info.w * s / 2, hh: info.h * s / 2 }
+    }
+    return null
   }
 
   // ── Input ────────────────────────────────────────────────────────────────────
@@ -219,227 +420,301 @@ export default class EditorScene extends Phaser.Scene {
     const cam = this.cameras.main
 
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      const tx = Math.floor(p.worldX / TILE)
-      const ty = Math.floor(p.worldY / TILE)
-
-      // cursor highlight
+      const wx = p.worldX, wy = p.worldY
+      this.events.emit('cursor-moved', { wx: Math.round(wx), wy: Math.round(wy) })
       this.cursorLayer.clear()
-      if (this.activeTool !== 'select') {
-        const cat = this.activeTool === 'furniture' ? this.activeFurniture : null
-        const cw = cat ? cat.w : 1
-        const ch = cat ? cat.h : 1
-        this.cursorLayer.lineStyle(2, 0xffff00, 0.9)
-        this.cursorLayer.fillStyle(0xffff00, 0.15)
-        this.cursorLayer.fillRect(tx * TILE, ty * TILE, cw * TILE, ch * TILE)
-        this.cursorLayer.strokeRect(tx * TILE, ty * TILE, cw * TILE, ch * TILE)
-      }
 
-      // arrastar móvel
-      if (this.isDragging && this.dragTarget) {
-        this.dragTarget.x = tx - this.dragOffX
-        this.dragTarget.y = ty - this.dragOffY
-        this.drawFurniture()
+      if (this.isDragging && this.selectedItem) {
+        this.applyDrag(wx - this.dragOffX, wy - this.dragOffY)
         return
       }
 
-      // pintura contínua
-      if (this.isPainting) {
-        if (this.activeTool === 'floor')       this.paintFloor(tx, ty)
-        if (this.activeTool === 'erase-floor') this.eraseFloor(tx, ty)
-      }
-
-      // preview de sala
-      if (this.isDrawingRoom && this.roomStart) {
-        const x = Math.min(tx, this.roomStart.tx)
-        const y = Math.min(ty, this.roomStart.ty)
-        const w = Math.abs(tx - this.roomStart.tx) + 1
-        const h = Math.abs(ty - this.roomStart.ty) + 1
+      if (this.isDrawingRoom) {
+        const sx = this.roomDrawStart.wx, sy = this.roomDrawStart.wy
+        const x = Math.min(wx, sx), y = Math.min(wy, sy)
+        const w = Math.abs(wx - sx), h = Math.abs(wy - sy)
         this.roomPreviewLayer.clear()
         this.roomPreviewLayer.lineStyle(2, 0xffff00, 1)
-        this.roomPreviewLayer.fillStyle(0xffff00, 0.12)
-        this.roomPreviewLayer.fillRect(x * TILE, y * TILE, w * TILE, h * TILE)
-        this.roomPreviewLayer.strokeRect(x * TILE, y * TILE, w * TILE, h * TILE)
+        this.roomPreviewLayer.fillStyle(0xffff00, 0.1)
+        this.roomPreviewLayer.fillRect(x, y, w, h)
+        this.roomPreviewLayer.strokeRect(x, y, w, h)
+        return
       }
 
-      // pan câmera
-      if (this.isPanning) {
-        cam.scrollX = this.panScrollStart.x - (p.x - this.panStart.x) / cam.zoom
-        cam.scrollY = this.panScrollStart.y - (p.y - this.panStart.y) / cam.zoom
+      if (this.activeTool === 'add-object') {
+        const info = objInfo(this.activeObjectType)
+        this.cursorLayer.lineStyle(2, 0xffff00, 0.85)
+        this.cursorLayer.fillStyle(0xffff00, 0.15)
+        this.cursorLayer.fillRect(wx - info.w / 2, wy - info.h / 2, info.w, info.h)
+        this.cursorLayer.strokeRect(wx - info.w / 2, wy - info.h / 2, info.w, info.h)
       }
+      if (this.activeTool === 'spawn') {
+        this.cursorLayer.lineStyle(2, 0x00ff88, 0.9)
+        this.cursorLayer.strokeCircle(wx, wy, 22)
+      }
+
     })
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      const tx = Math.floor(p.worldX / TILE)
-      const ty = Math.floor(p.worldY / TILE)
+      const wx = p.worldX, wy = p.worldY
 
-      // pan com botão direito
-      if (p.rightButtonDown()) {
-        this.isPanning = true
-        this.panStart = { x: p.x, y: p.y }
-        this.panScrollStart = { x: cam.scrollX, y: cam.scrollY }
-        return
-      }
+      if (p.rightButtonDown()) return
 
       if (this.activeTool === 'select') {
-        const found = this.furnitureAt(tx, ty)
-        if (found) {
+        const hit = this.hitTest(wx, wy)
+        if (hit) {
+          this.selectedItem = hit.item
+          const b = this.getItemBounds(hit.item)!
+          this.dragOffX = wx - b.cx
+          this.dragOffY = wy - b.cy
           this.isDragging = true
-          this.dragTarget = found
-          this.dragOffX = tx - found.x
-          this.dragOffY = ty - found.y
+          this.drawSelectionHighlight()
+          this.events.emit('item-selected', this.buildItemInfo(hit.item))
+        } else {
+          this.selectedItem = null
+          this.drawSelectionHighlight()
+          this.events.emit('item-selected', null)
         }
         return
       }
 
-      if (this.activeTool === 'floor') {
-        this.isPainting = true
-        this.paintFloor(tx, ty)
+      if (this.activeTool === 'delete') {
+        const hit = this.hitTest(wx, wy)
+        if (hit) this.removeItem(hit.item)
         return
       }
 
-      if (this.activeTool === 'erase-floor') {
-        this.isPainting = true
-        this.eraseFloor(tx, ty)
+      if (this.activeTool === 'add-object') {
+        this.placeObject(wx, wy)
         return
       }
 
-      if (this.activeTool === 'erase-furniture') {
-        const found = this.furnitureAt(tx, ty)
-        if (found) {
-          this.mapData.furniture = this.mapData.furniture.filter(f => f.id !== found.id)
-          this.drawFurniture()
-          this.autoSave()
-        }
-        return
-      }
-
-      if (this.activeTool === 'room') {
+      if (this.activeTool === 'add-room') {
         this.isDrawingRoom = true
-        this.roomStart = { tx, ty }
+        this.roomDrawSi = this.spaceIndexAt(wx, wy)
+        this.roomDrawStart = { wx, wy }
         return
       }
 
-      if (this.activeTool === 'furniture') {
-        this.placeFurniture(tx, ty)
+      if (this.activeTool === 'spawn') {
+        const si = this.spaceIndexAt(wx, wy)
+        const space = this.mapData.spaces[si]
+        const ox = space.offset?.x ?? 0
+        const oy = space.offset?.y ?? 0
+        space.spawnPoint = { x: Math.round(wx - ox), y: Math.round(wy - oy) }
+        this.spawnLayer.clear()
+        for (let i = 0; i < this.mapData.spaces.length; i++) this.drawSpawnMarker(i)
+        this.autoSave()
+        this.events.emit('spawn-changed', { si, x: space.spawnPoint.x, y: space.spawnPoint.y })
+        return
       }
     })
 
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
-      if (p.rightButtonReleased()) { this.isPanning = false; return }
-
-      const tx = Math.floor(p.worldX / TILE)
-      const ty = Math.floor(p.worldY / TILE)
+      if (p.rightButtonReleased()) return
+      const wx = p.worldX, wy = p.worldY
 
       if (this.isDragging) {
         this.isDragging = false
-        this.dragTarget = null
-        this.drawFurniture()
+        this.redrawAll()
         this.autoSave()
+        if (this.selectedItem) this.events.emit('item-selected', this.buildItemInfo(this.selectedItem))
         return
       }
 
-      if (this.isPainting) {
-        this.isPainting = false
-        this.autoSave()
-        return
-      }
-
-      if (this.isDrawingRoom && this.roomStart) {
+      if (this.isDrawingRoom) {
         this.isDrawingRoom = false
         this.roomPreviewLayer.clear()
-        const x = Math.min(tx, this.roomStart.tx)
-        const y = Math.min(ty, this.roomStart.ty)
-        const w = Math.abs(tx - this.roomStart.tx) + 1
-        const h = Math.abs(ty - this.roomStart.ty) + 1
-        this.roomStart = null
-        if (w >= 2 && h >= 2) this.promptNewRoom(x, y, w, h)
+        const sx = this.roomDrawStart.wx, sy = this.roomDrawStart.wy
+        const rw = Math.abs(wx - sx), rh = Math.abs(wy - sy)
+        if (rw > 40 && rh > 40) {
+          this.promptNewRoom(this.roomDrawSi, Math.min(wx, sx), Math.min(wy, sy), rw, rh)
+        }
       }
     })
 
-    // zoom
-    this.input.on('wheel', (_p: any, _go: any, _dx: any, deltaY: number) => {
-      const zoom = Phaser.Math.Clamp(cam.zoom - deltaY * 0.001, 0.25, 2.5)
+    this.input.on('wheel', (_p: any, _go: any, _dx: any, dy: number) => {
+      const zoom = Phaser.Math.Clamp(cam.zoom - dy * 0.0008, 0.1, 2)
       cam.setZoom(zoom)
     })
   }
 
   // ── Ações ────────────────────────────────────────────────────────────────────
 
-  private furnitureAt(tx: number, ty: number): FurnitureItem | undefined {
-    return [...this.mapData.furniture].reverse().find(f => {
-      const cat = FURNITURE_CATALOG.find(c => c.type === f.type)!
-      return tx >= f.x && tx < f.x + cat.w && ty >= f.y && ty < f.y + cat.h
-    })
+  private hitTest(wx: number, wy: number): HitArea | null {
+    const sorted = [...this.hitAreas].sort((a, b) => b.zOrder - a.zOrder)
+    return sorted.find(h =>
+      wx >= h.wx - h.hw && wx <= h.wx + h.hw &&
+      wy >= h.wy - h.hh && wy <= h.wy + h.hh
+    ) ?? null
   }
 
-  private paintFloor(tx: number, ty: number) {
-    if (tx < 0 || ty < 0 || tx >= this.mapData.width || ty >= this.mapData.height) return
-    const existing = this.mapData.floors.find(f => f.x === tx && f.y === ty)
-    if (existing) { existing.tile = this.activeFloor.key }
-    else { this.mapData.floors.push({ x: tx, y: ty, tile: this.activeFloor.key }) }
-    this.drawFloors()
+  private spaceIndexAt(wx: number, wy: number): number {
+    for (let i = 0; i < this.mapData.spaces.length; i++) {
+      const s = this.mapData.spaces[i]
+      const ox = s.offset?.x ?? 0, oy = s.offset?.y ?? 0
+      if (wx >= ox && wx <= ox + s.width && wy >= oy && wy <= oy + s.height) return i
+    }
+    return 0
   }
 
-  private eraseFloor(tx: number, ty: number) {
-    this.mapData.floors = this.mapData.floors.filter(f => !(f.x === tx && f.y === ty))
-    this.drawFloors()
+  private applyDrag(cx: number, cy: number) {
+    const item  = this.selectedItem!
+    const space = this.mapData.spaces[item.si]
+    const ox    = space.offset?.x ?? 0
+    const oy    = space.offset?.y ?? 0
+
+    if (item.kind === 'room') {
+      const r = space.rooms![item.ri]
+      r.x = Math.round(cx - ox); r.y = Math.round(cy - oy)
+    } else if (item.kind === 'room-obj') {
+      const r = space.rooms![item.ri]
+      const o = r.objects![item.oi]
+      o.x = Math.round(cx - (ox + r.x)); o.y = Math.round(cy - (oy + r.y))
+    } else if (item.kind === 'space-obj') {
+      const o = space.objects![item.oi]
+      o.x = Math.round(cx - ox); o.y = Math.round(cy - oy)
+    }
+
+    this.labels.forEach(l => l.destroy()); this.labels = []
+    this.hitAreas = []
+    this.bgLayer.clear(); this.roomLayer.clear()
+    this.objLayer.clear(); this.spawnLayer.clear()
+    for (let si = 0; si < this.mapData.spaces.length; si++) this.drawSpace(si)
+    this.drawSelectionHighlight()
   }
 
-  private placeFurniture(tx: number, ty: number) {
-    this.mapData.furniture.push({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      type: this.activeFurniture.type,
-      x: tx,
-      y: ty,
-    })
-    this.drawFurniture()
-    this.autoSave()
+  private placeObject(wx: number, wy: number) {
+    // verifica se está dentro de uma sala
+    const roomHit = [...this.hitAreas]
+      .filter(h => h.item.kind === 'room')
+      .find(h => wx >= h.wx - h.hw && wx <= h.wx + h.hw && wy >= h.wy - h.hh && wy <= h.wy + h.hh)
+
+    if (roomHit) {
+      const { si, ri } = roomHit.item as Extract<SelectedEditorItem, { kind: 'room' }>
+      const space = this.mapData.spaces[si]
+      const room  = space.rooms![ri]
+      const ox    = space.offset?.x ?? 0, oy = space.offset?.y ?? 0
+      if (!room.objects) room.objects = []
+      room.objects.push({ type: this.activeObjectType, x: Math.round(wx - (ox + room.x)), y: Math.round(wy - (oy + room.y)) })
+    } else {
+      const si    = this.spaceIndexAt(wx, wy)
+      const space = this.mapData.spaces[si]
+      const ox    = space.offset?.x ?? 0, oy = space.offset?.y ?? 0
+      if (!space.objects) space.objects = []
+      space.objects.push({ type: this.activeObjectType, x: Math.round(wx - ox), y: Math.round(wy - oy) })
+    }
+
+    this.redrawAll(); this.autoSave()
   }
 
-  private promptNewRoom(x: number, y: number, w: number, h: number) {
+  private removeItem(item: SelectedEditorItem) {
+    const space = this.mapData.spaces[item.si]
+    if (item.kind === 'room')      space.rooms?.splice(item.ri, 1)
+    if (item.kind === 'room-obj')  space.rooms?.[item.ri]?.objects?.splice(item.oi, 1)
+    if (item.kind === 'space-obj') space.objects?.splice(item.oi, 1)
+    this.selectedItem = null
+    this.events.emit('item-selected', null)
+    this.events.emit('rooms-changed')
+    this.redrawAll(); this.autoSave()
+  }
+
+  private promptNewRoom(si: number, x: number, y: number, rw: number, rh: number) {
     const name = window.prompt('Nome da sala:', 'Nova Sala')
     if (!name?.trim()) return
-    const color = ROOM_COLORS[this.mapData.rooms.length % ROOM_COLORS.length]
-    this.mapData.rooms.push({ id: `${Date.now()}`, name: name.trim(), x, y, w, h, color })
-    this.drawRooms()
-    this.autoSave()
-    // avisar overlay para atualizar lista
+    const space = this.mapData.spaces[si]
+    const ox    = space.offset?.x ?? 0, oy = space.offset?.y ?? 0
+    if (!space.rooms) space.rooms = []
+    space.rooms.push({
+      id: `room-${Date.now()}`,
+      name: name.trim(),
+      x: Math.round(x - ox + rw / 2),
+      y: Math.round(y - oy + rh / 2),
+      width: Math.round(rw), height: Math.round(rh),
+      floorColor: '#eeeeee', wallColor: '#5d4037',
+      objects: [],
+    })
+    this.redrawAll(); this.autoSave()
     this.events.emit('rooms-changed')
   }
 
-  deleteRoom(id: string) {
-    // destroi labels associados
-    this.roomLabels.forEach(l => l.destroy())
-    this.roomLabels = []
-    this.mapData.rooms = this.mapData.rooms.filter(r => r.id !== id)
-    this.drawRooms()
-    this.autoSave()
+  // ── API pública (para EditorOverlay) ─────────────────────────────────────────
+
+  buildItemInfo(item: SelectedEditorItem): Record<string, any> | null {
+    const space = this.mapData.spaces[item.si]
+    const ox = space?.offset?.x ?? 0, oy = space?.offset?.y ?? 0
+    if (item.kind === 'room') {
+      const r = space?.rooms?.[item.ri]
+      if (!r) return null
+      return { kind: 'room', si: item.si, ri: item.ri,
+        name: r.name, x: r.x, y: r.y, width: r.width, height: r.height,
+        floorColor: r.floorColor ?? '#eeeeee', wallColor: r.wallColor ?? '#5d4037',
+        worldX: ox + r.x, worldY: oy + r.y }
+    }
+    if (item.kind === 'room-obj') {
+      const r = space?.rooms?.[item.ri], o = r?.objects?.[item.oi]
+      if (!r || !o) return null
+      return { kind: 'room-obj', si: item.si, ri: item.ri, oi: item.oi,
+        type: o.type, x: o.x, y: o.y, scale: o.scale ?? 1,
+        worldX: Math.round(ox + r.x + o.x), worldY: Math.round(oy + r.y + o.y) }
+    }
+    if (item.kind === 'space-obj') {
+      const o = space?.objects?.[item.oi]
+      if (!o) return null
+      return { kind: 'space-obj', si: item.si, oi: item.oi,
+        type: o.type, x: o.x, y: o.y, scale: o.scale ?? 1,
+        worldX: Math.round(ox + o.x), worldY: Math.round(oy + o.y) }
+    }
+    return null
   }
 
-  renameRoom(id: string, name: string) {
-    const room = this.mapData.rooms.find(r => r.id === id)
-    if (room) room.name = name
-    this.drawRooms()
-    this.autoSave()
+  applyItemUpdate(info: Record<string, any>) {
+    const space = this.mapData.spaces[info.si]
+    if (info.kind === 'room') {
+      const r = space?.rooms?.[info.ri]
+      if (!r) return
+      r.name = info.name; r.x = info.x; r.y = info.y
+      r.width = info.width; r.height = info.height
+      r.floorColor = info.floorColor; r.wallColor = info.wallColor
+    } else if (info.kind === 'room-obj') {
+      const o = space?.rooms?.[info.ri]?.objects?.[info.oi]
+      if (!o) return
+      o.x = info.x; o.y = info.y; o.scale = info.scale
+    } else if (info.kind === 'space-obj') {
+      const o = space?.objects?.[info.oi]
+      if (!o) return
+      o.x = info.x; o.y = info.y; o.scale = info.scale
+    }
+    this.redrawAll(); this.autoSave()
+    this.events.emit('rooms-changed')
   }
 
-  setActiveTool(tool: Tool) {
+  setTool(tool: EditorTool) {
     this.activeTool = tool
+    if (tool !== 'select') {
+      this.selectedItem = null
+      this.drawSelectionHighlight()
+      this.events.emit('item-selected', null)
+    }
   }
 
-  setActiveFloor(key: string) {
-    this.activeFloor = FLOOR_TYPES.find(f => f.key === key) ?? FLOOR_TYPES[0]
+  setActiveObjectType(type: string) { this.activeObjectType = type }
+
+  getSpaces() { return this.mapData?.spaces ?? [] }
+
+  focusSpace(si: number) {
+    if (!this.mapData) return
+    const space = this.mapData.spaces[si]
+    const ox = space.offset?.x ?? 0, oy = space.offset?.y ?? 0
+    this.cameras.main.setZoom(0.38)
+    this.cameras.main.centerOn(ox + space.width / 2, oy + space.height / 2)
   }
 
-  setActiveFurniture(type: string) {
-    this.activeFurniture = FURNITURE_CATALOG.find(f => f.type === type) ?? FURNITURE_CATALOG[0]
-  }
-
-  // ── Autosave ──────────────────────────────────────────────────────────────────
+  // ── Autosave ─────────────────────────────────────────────────────────────────
 
   private autoSave() {
     if (this.saveTimer) clearTimeout(this.saveTimer)
-    this.saveTimer = setTimeout(() => this.save(), 700)
+    this.saveTimer = setTimeout(() => this.save(), 800)
   }
 
   async save() {
@@ -451,5 +726,9 @@ export default class EditorScene extends Phaser.Scene {
     this.events.emit('map-saved')
   }
 
-  getRooms() { return this.mapData.rooms }
+  // ── Utilitários ──────────────────────────────────────────────────────────────
+
+  private hexToNum(hex: string): number {
+    return parseInt(hex.replace('#', ''), 16)
+  }
 }

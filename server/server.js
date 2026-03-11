@@ -22,6 +22,14 @@ io.on('connection', (socket) => {
 
   // Quando um jogador entra
   socket.on('player-joined', (data) => {
+    // Remove sessão antiga com mesmo username (refresh/reconexão rápida)
+    Object.keys(players).forEach(id => {
+      if (id !== socket.id && players[id].username === data.username) {
+        socket.broadcast.emit('player-disconnected', id)
+        delete players[id]
+      }
+    })
+
     players[socket.id] = {
       id: socket.id,
       username: data.username,

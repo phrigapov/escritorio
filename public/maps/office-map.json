@@ -4,10 +4,16 @@
     {
       "id": "escritorio-principal",
       "name": "🏢 Escritório Principal",
-      "offset": { "x": 0, "y": 0 },
+      "offset": {
+        "x": 0,
+        "y": 0
+      },
       "width": 1000,
       "height": 1000,
-      "spawnPoint": { "x": 920, "y": 700 },
+      "spawnPoint": {
+        "x": 920,
+        "y": 700
+      },
       "floor": {
         "tileSize": 100,
         "colorA": "#e8e8e8",
@@ -17,94 +23,282 @@
         {
           "id": "diretoria",
           "name": "Diretoria",
-          "x": 250,
-          "y": 150,
+          "x": 842,
+          "y": 131,
           "width": 300,
           "height": 250,
           "floorColor": "#faf0e6",
           "wallColor": "#795548",
-          "door": { "side": "bottom", "label": "🚪 Diretoria", "width": 80 },
+          "door": {
+            "side": "bottom",
+            "label": "🚪 Diretoria",
+            "width": 80
+          },
           "objects": [
-            { "type": "desk",      "x":   0, "y":  40, "scale": 1.3 },
-            { "type": "bookshelf", "x": -100, "y": -50 },
-            { "type": "plant",     "x":  110, "y":  80 }
+            {
+              "type": "desk",
+              "x": 0,
+              "y": 40,
+              "scale": 1.3
+            },
+            {
+              "type": "bookshelf",
+              "x": -100,
+              "y": -50
+            },
+            {
+              "type": "plant",
+              "x": 110,
+              "y": 80
+            }
           ]
         },
         {
           "id": "sala-reuniao",
           "name": "Sala de Reunião",
-          "x": 1630,
-          "y": 310,
-          "width": 350,
-          "height": 400,
+          "x": 357,
+          "y": 770,
+          "width": 200,
+          "height": 300,
           "floorColor": "#dcdcdc",
-          "wallColor": "#546e7a",
-          "door": { "side": "left", "label": "📊 Reunião", "width": 90 },
+          "wallColor": "#28769a",
+          "door": {
+            "side": "left",
+            "label": "📊 Reunião",
+            "width": 90
+          },
           "objects": [
-            { "type": "meetingTable", "x":   0, "y":   0 },
-            { "type": "chair",        "x": -70, "y": -65 },
-            { "type": "chair",        "x":   0, "y": -85 },
-            { "type": "chair",        "x":  70, "y": -65 },
-            { "type": "chair",        "x": -70, "y":  65 },
-            { "type": "chair",        "x":   0, "y":  85 },
-            { "type": "chair",        "x":  70, "y":  65 },
-            { "type": "plant",        "x": 145, "y": -155 },
-            { "type": "plant",        "x": 145, "y":  155 }
+            {
+              "type": "meetingTable",
+              "x": 11,
+              "y": 0
+            },
+            {
+              "type": "chair",
+              "x": -70,
+              "y": -65
+            },
+            {
+              "type": "chair",
+              "x": 0,
+              "y": -85
+            },
+            {
+              "type": "chair",
+              "x": 70,
+              "y": -65
+            },
+            {
+              "type": "chair",
+              "x": -70,
+              "y": 65
+            },
+            {
+              "type": "chair",
+              "x": 0,
+              "y": 85
+            },
+            {
+              "type": "chair",
+              "x": 70,
+              "y": 65
+            },
+            {
+              "type": "plant",
+              "x": 145,
+              "y": -155
+            },
+            {
+              "type": "plant",
+              "x": 145,
+              "y": 155
+            }
           ]
         },
         {
           "id": "copa",
           "name": "Copa",
-          "x": 1650,
-          "y": 950,
+          "x": 843,
+          "y": 791,
           "width": 300,
           "height": 400,
           "floorColor": "#e8d4b0",
           "wallColor": "#795548",
-          "door": { "side": "left", "label": "☕ Copa", "width": 80 },
+          "door": {
+            "side": "left",
+            "label": "☕ Copa",
+            "width": 80
+          },
           "objects": [
-            { "type": "coffee", "x": -100, "y": -140 },
-            { "type": "sofa",   "x":    0, "y":   80 },
-            { "type": "plant",  "x": -100, "y":  160 },
-            { "type": "plant",  "x":  100, "y": -160 },
-            { "type": "trash",  "x":  120, "y":  160 }
+            {
+              "type": "coffee",
+              "x": -100,
+              "y": -140
+            },
+            {
+              "type": "sofa",
+              "x": 0,
+              "y": 80
+            },
+            {
+              "type": "plant",
+              "x": -100,
+              "y": 160
+            },
+            {
+              "type": "plant",
+              "x": 100,
+              "y": -160
+            },
+            {
+              "type": "trash",
+              "x": 120,
+              "y": 160
+            }
           ]
         }
       ],
       "objects": [
-        { "type": "workstation", "x": 250, "y": 300 },
-        { "type": "workstation", "x": 450, "y": 300 },
-        { "type": "workstation", "x": 650, "y": 300 },
-        { "type": "workstation", "x": 250, "y": 500 },
-        { "type": "workstation", "x": 450, "y": 500 },
-        { "type": "workstation", "x": 650, "y": 500 },
-        { "type": "workstation", "x": 250, "y": 700 },
-        { "type": "workstation", "x": 450, "y": 700 },
-        { "type": "workstation", "x": 650, "y": 700 },
-        { "type": "workstation", "x": 250, "y": 900 },
-        { "type": "workstation", "x": 450, "y": 900 },
-        { "type": "workstation", "x": 650, "y": 900 },
-        { "type": "plant",    "x":  100, "y":  250 },
-        { "type": "plant",    "x":  800, "y":  250 },
-        { "type": "plant",    "x":  800, "y":  950 },
-        { "type": "plant",    "x":  100, "y":  950 },
-        { "type": "plant",    "x":  950, "y":  350 },
-        { "type": "plant",    "x":  950, "y":  650 },
-        { "type": "plant",    "x":  950, "y":  950 },
-        { "type": "water",    "x":  950, "y":  600 },
-        { "type": "printer",  "x":  950, "y": 1100 },
-        { "type": "cabinet",  "x": 1050, "y":  300 },
-        { "type": "cabinet",  "x": 1050, "y":  400 },
-        { "type": "trash",    "x":  100, "y": 1200 }
+        {
+          "type": "workstation",
+          "x": 253,
+          "y": 428
+        },
+        {
+          "type": "workstation",
+          "x": 316,
+          "y": 431
+        },
+        {
+          "type": "workstation",
+          "x": 382,
+          "y": 433
+        },
+        {
+          "type": "workstation",
+          "x": 250,
+          "y": 500
+        },
+        {
+          "type": "workstation",
+          "x": 313,
+          "y": 502
+        },
+        {
+          "type": "workstation",
+          "x": 378,
+          "y": 502
+        },
+        {
+          "type": "workstation",
+          "x": 442,
+          "y": 504
+        },
+        {
+          "type": "workstation",
+          "x": 448,
+          "y": 434
+        },
+        {
+          "type": "workstation",
+          "x": 231,
+          "y": 137
+        },
+        {
+          "type": "workstation",
+          "x": 298,
+          "y": 136
+        },
+        {
+          "type": "workstation",
+          "x": 231,
+          "y": 208
+        },
+        {
+          "type": "workstation",
+          "x": 296,
+          "y": 208
+        },
+        {
+          "type": "plant",
+          "x": 100,
+          "y": 250
+        },
+        {
+          "type": "plant",
+          "x": 800,
+          "y": 250
+        },
+        {
+          "type": "plant",
+          "x": 868,
+          "y": 476
+        },
+        {
+          "type": "plant",
+          "x": 100,
+          "y": 950
+        },
+        {
+          "type": "plant",
+          "x": 950,
+          "y": 350
+        },
+        {
+          "type": "plant",
+          "x": 950,
+          "y": 650
+        },
+        {
+          "type": "plant",
+          "x": 950,
+          "y": 950
+        },
+        {
+          "type": "water",
+          "x": 950,
+          "y": 600
+        },
+        {
+          "type": "printer",
+          "x": 950,
+          "y": 1100
+        },
+        {
+          "type": "cabinet",
+          "x": 921,
+          "y": 258
+        },
+        {
+          "type": "cabinet",
+          "x": 955,
+          "y": 434
+        },
+        {
+          "type": "trash",
+          "x": 100,
+          "y": 1200
+        },
+        {
+          "type": "plant",
+          "x": 925,
+          "y": 802
+        }
       ]
     },
     {
       "id": "espaco-criativo",
       "name": "🎨 Espaço Criativo",
-      "offset": { "x": 0, "y": 1600 },
+      "offset": {
+        "x": 0,
+        "y": 1600
+      },
       "width": 1800,
       "height": 1200,
-      "spawnPoint": { "x": 500, "y": 600 },
+      "spawnPoint": {
+        "x": 500,
+        "y": 600
+      },
       "floor": {
         "tileSize": 80,
         "colorA": "#e1f5fe",
@@ -120,14 +314,43 @@
           "height": 500,
           "floorColor": "#fce4ec",
           "wallColor": "#ad1457",
-          "door": { "side": "left", "label": "🛋️ Lounge", "width": 90 },
+          "door": {
+            "side": "left",
+            "label": "🛋️ Lounge",
+            "width": 90
+          },
           "objects": [
-            { "type": "sofa",   "x":   0, "y": -100 },
-            { "type": "sofa",   "x":   0, "y":  60, "flipX": true },
-            { "type": "plant",  "x":  160, "y": -185 },
-            { "type": "plant",  "x": -160, "y": -185 },
-            { "type": "plant",  "x":  160, "y":  180 },
-            { "type": "coffee", "x": -120, "y":  150 }
+            {
+              "type": "sofa",
+              "x": 0,
+              "y": -100
+            },
+            {
+              "type": "sofa",
+              "x": 0,
+              "y": 60,
+              "flipX": true
+            },
+            {
+              "type": "plant",
+              "x": 160,
+              "y": -185
+            },
+            {
+              "type": "plant",
+              "x": -160,
+              "y": -185
+            },
+            {
+              "type": "plant",
+              "x": 160,
+              "y": 180
+            },
+            {
+              "type": "coffee",
+              "x": -120,
+              "y": 150
+            }
           ]
         },
         {
@@ -139,42 +362,171 @@
           "height": 340,
           "floorColor": "#e8eaf6",
           "wallColor": "#283593",
-          "door": { "side": "left", "label": "📚 Biblioteca", "width": 80 },
+          "door": {
+            "side": "left",
+            "label": "📚 Biblioteca",
+            "width": 80
+          },
           "objects": [
-            { "type": "bookshelf", "x": -155, "y": -100 },
-            { "type": "bookshelf", "x": -155, "y":    0 },
-            { "type": "bookshelf", "x": -155, "y":  100 },
-            { "type": "desk",      "x":   40, "y":  -50 },
-            { "type": "chair",     "x":   40, "y":   10 },
-            { "type": "desk",      "x":   40, "y":   80 },
-            { "type": "plant",     "x":  155, "y": -130 }
+            {
+              "type": "bookshelf",
+              "x": -155,
+              "y": -100
+            },
+            {
+              "type": "bookshelf",
+              "x": -155,
+              "y": 0
+            },
+            {
+              "type": "bookshelf",
+              "x": -155,
+              "y": 100
+            },
+            {
+              "type": "desk",
+              "x": 40,
+              "y": -50
+            },
+            {
+              "type": "chair",
+              "x": 40,
+              "y": 10
+            },
+            {
+              "type": "desk",
+              "x": 40,
+              "y": 80
+            },
+            {
+              "type": "plant",
+              "x": 155,
+              "y": -130
+            }
           ]
         }
       ],
       "objects": [
-        { "type": "workstation", "x": 200, "y": 280 },
-        { "type": "workstation", "x": 400, "y": 180 },
-        { "type": "workstation", "x": 600, "y": 280 },
-        { "type": "workstation", "x": 800, "y": 180 },
-        { "type": "workstation", "x": 1000, "y": 280 },
-        { "type": "workstation", "x": 200, "y": 620 },
-        { "type": "workstation", "x": 400, "y": 720 },
-        { "type": "workstation", "x": 600, "y": 620 },
-        { "type": "workstation", "x": 800, "y": 720 },
-        { "type": "workstation", "x": 1000, "y": 620 },
-        { "type": "workstation", "x": 200, "y": 980 },
-        { "type": "workstation", "x": 400, "y": 1080 },
-        { "type": "workstation", "x": 600, "y": 980 },
-        { "type": "plant",   "x":   80, "y":  100 },
-        { "type": "plant",   "x": 1100, "y":  100 },
-        { "type": "plant",   "x":   80, "y": 1080 },
-        { "type": "plant",   "x": 1100, "y":  900 },
-        { "type": "plant",   "x":  600, "y": 1080 },
-        { "type": "water",   "x": 1150, "y":  460 },
-        { "type": "printer", "x": 1150, "y":  580 },
-        { "type": "trash",   "x": 1150, "y":  700 },
-        { "type": "cabinet", "x":   80, "y":  500 },
-        { "type": "cabinet", "x":   80, "y":  600 }
+        {
+          "type": "workstation",
+          "x": 200,
+          "y": 280
+        },
+        {
+          "type": "workstation",
+          "x": 400,
+          "y": 180
+        },
+        {
+          "type": "workstation",
+          "x": 600,
+          "y": 280
+        },
+        {
+          "type": "workstation",
+          "x": 800,
+          "y": 180
+        },
+        {
+          "type": "workstation",
+          "x": 1000,
+          "y": 280
+        },
+        {
+          "type": "workstation",
+          "x": 200,
+          "y": 620
+        },
+        {
+          "type": "workstation",
+          "x": 400,
+          "y": 720
+        },
+        {
+          "type": "workstation",
+          "x": 600,
+          "y": 620
+        },
+        {
+          "type": "workstation",
+          "x": 800,
+          "y": 720
+        },
+        {
+          "type": "workstation",
+          "x": 1000,
+          "y": 620
+        },
+        {
+          "type": "workstation",
+          "x": 200,
+          "y": 980
+        },
+        {
+          "type": "workstation",
+          "x": 400,
+          "y": 1080
+        },
+        {
+          "type": "workstation",
+          "x": 600,
+          "y": 980
+        },
+        {
+          "type": "plant",
+          "x": 80,
+          "y": 100
+        },
+        {
+          "type": "plant",
+          "x": 1100,
+          "y": 100
+        },
+        {
+          "type": "plant",
+          "x": 80,
+          "y": 1080
+        },
+        {
+          "type": "plant",
+          "x": 1100,
+          "y": 900
+        },
+        {
+          "type": "plant",
+          "x": 600,
+          "y": 1080
+        },
+        {
+          "type": "water",
+          "x": 1150,
+          "y": 460
+        },
+        {
+          "type": "printer",
+          "x": 1150,
+          "y": 580
+        },
+        {
+          "type": "trash",
+          "x": 1150,
+          "y": 700
+        },
+        {
+          "type": "cabinet",
+          "x": 80,
+          "y": 500
+        },
+        {
+          "type": "cabinet",
+          "x": 80,
+          "y": 600
+        },
+        {
+          "type": "plant",
+          "x": 1564,
+          "y": 691
+        }
       ]
     }
   ]

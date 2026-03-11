@@ -87,6 +87,11 @@ app.prepare().then(() => {
       socket.broadcast.emit('player-status-changed', { id: socket.id, status: data.status })
     })
 
+    // Ping de latência
+    socket.on('ping-check', (callback) => {
+      if (typeof callback === 'function') callback()
+    })
+
     // Desconexão
     socket.on('disconnect', () => {
       const player = players[socket.id]
