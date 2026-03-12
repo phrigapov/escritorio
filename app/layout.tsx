@@ -20,6 +20,14 @@ export default function RootLayout({
           src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"
           strategy="beforeInteractive"
         />
+        {/* Preload de sprites críticos para cache do navegador */}
+        <link rel="preload" href="/sprites/Julia_walk_Foward.png" as="image" />
+        <link rel="preload" href="/sprites/Julia_walk_Up.png" as="image" />
+        <link rel="preload" href="/sprites/Julia_walk_Left.png" as="image" />
+        <link rel="preload" href="/sprites/Julia_walk_Rigth.png" as="image" />
+        <link rel="preload" href="/sprites/desk.png" as="image" />
+        <link rel="preload" href="/sprites/Chair.png" as="image" />
+        <link rel="preload" href="/maps/office-map.json" as="fetch" crossOrigin="anonymous" />
       </head>
       <body>{children}</body>
     </html>

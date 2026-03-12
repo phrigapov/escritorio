@@ -8,11 +8,18 @@ import GitHubPanel from './GitHubPanel'
 // EditorOverlay só carrega no cliente (usa refs de cena Phaser)
 const EditorOverlay = dynamic(() => import('./EditorOverlay'), { ssr: false })
 
-interface GameProps {
+interface User {
   username: string
+  name?: string
+  avatar?: string
+  loginType: 'simple' | 'github'
 }
 
-export default function Game({ username }: GameProps) {
+interface GameProps {
+  user: User
+}
+
+export default function Game({ user }: GameProps) {
   const gameRef        = useRef<any>(null)
   const editorSceneRef = useRef<any>(null)
   const [isLoading, setIsLoading]   = useState(true)
@@ -54,13 +61,13 @@ export default function Game({ username }: GameProps) {
 
     const initGame = async () => {
       try {
-        // Aguarda o Phaser da CDN estar disponível (máx 10s)
+        // Aguarda o Phaser da CDN estar disponível (máx 5s, checagem a cada 20ms)
         await new Promise<void>((resolve, reject) => {
           if ((window as any).Phaser) { resolve(); return }
-          const t = setTimeout(() => reject(new Error('Phaser CDN não carregou')), 10000)
+          const t = setTimeout(() => reject(new Error('Phaser CDN não carregou')), 5000)
           const check = setInterval(() => {
             if ((window as any).Phaser) { clearInterval(check); clearTimeout(t); resolve() }
-          }, 50)
+          }, 20)
         })
 
         const Phaser      = (window as any).Phaser as typeof import('phaser')
@@ -83,7 +90,7 @@ export default function Game({ username }: GameProps) {
         }
 
         gameRef.current = new Phaser.Game(config)
-        gameRef.current.registry.set('username', username)
+        gameRef.current.registry.set('username', user.name || user.username)
 
         setIsLoading(false)
 
@@ -110,7 +117,17 @@ export default function Game({ username }: GameProps) {
         gameRef.current = null
       }
     }
-  }, [username])
+  }, [user])
+
+  // ── Sincronizar estado do painel com a cena do jogo ────────────────────────
+  useEffect(() => {
+    if (gameRef.current) {
+      const mainScene = gameRef.current.scene.getScene('MainScene')
+      if (mainScene) {
+        (mainScene as any).isPanelOpen = githubOpen || editorOpen
+      }
+    }
+  }, [githubOpen, editorOpen])
 
   // ── Atalhos de teclado ────────────────────────────────────────────────────
   useEffect(() => {
@@ -146,7 +163,7 @@ export default function Game({ username }: GameProps) {
     <div className="game-wrapper">
       {isLoading && (
         <div style={{
-          position: 'absolute', top: 0, left: 0,
+          position: 'absolute', top: 0, left: 0, zIndex: 9999,
           width: '100%', height: '100%', display: 'flex',
           alignItems: 'center', justifyContent: 'center',
           background: '#2d3436', color: 'white', fontSize: '1.5rem', zIndex: 9999,
@@ -201,7 +218,10 @@ export default function Game({ username }: GameProps) {
 
       {/* Painel lateral do GitHub */}
       {!isLoading && githubOpen && (
-        <GitHubPanel onClose={() => setGithubOpen(false)} />
+        <GitHubPanel 
+          onClose={() => setGithubOpen(false)} 
+          defaultUsername={user.username}
+        />
       )}
 
       {/* Monitor de desempenho — sempre visível após o jogo carregar */}

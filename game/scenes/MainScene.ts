@@ -67,21 +67,49 @@ export default class MainScene extends Phaser.Scene {
   private playerStatusDot!: Phaser.GameObjects.Graphics
   private menuObjects: Phaser.GameObjects.GameObject[] = []
   private isMenuOpen = false
+  private isPanelOpen = false
 
   constructor() {
     super('MainScene')
   }
 
   preload() {
+    // Loading screen visual
+    const progressBar = this.add.graphics()
+    const progressBox = this.add.graphics()
+    progressBox.fillStyle(0x222222, 0.8)
+    progressBox.fillRect(this.cameras.main.width / 2 - 160, this.cameras.main.height / 2 - 25, 320, 50)
+    
+    const loadingText = this.add.text(this.cameras.main.width / 2, this.cameras.main.height / 2 - 50, 'Carregando...', {
+      fontSize: '20px',
+      color: '#ffffff'
+    }).setOrigin(0.5)
+
+    this.load.on('progress', (value: number) => {
+      progressBar.clear()
+      progressBar.fillStyle(0x4ade80, 1)
+      progressBar.fillRect(this.cameras.main.width / 2 - 150, this.cameras.main.height / 2 - 15, 300 * value, 30)
+    })
+
+    this.load.on('complete', () => {
+      progressBar.destroy()
+      progressBox.destroy()
+      loadingText.destroy()
+    })
+
+    // Sprites essenciais do personagem (carregamento prioritário)
     this.load.spritesheet('character_down',  '/sprites/Julia_walk_Foward.png', { frameWidth: 64, frameHeight: 64 })
     this.load.spritesheet('character_up',    '/sprites/Julia_walk_Up.png',     { frameWidth: 64, frameHeight: 64 })
     this.load.spritesheet('character_left',  '/sprites/Julia_walk_Left.png',   { frameWidth: 64, frameHeight: 64 })
     this.load.spritesheet('character_right', '/sprites/Julia_walk_Rigth.png',  { frameWidth: 64, frameHeight: 64 })
 
+    // Sprites de mobília mais comuns (carregamento prioritário)
     this.load.image('desk',       '/sprites/desk.png')
     this.load.image('desk-with-pc', '/sprites/desk-with-pc.png')
     this.load.image('chair',      '/sprites/Chair.png')
     this.load.image('plant',      '/sprites/plant.png')
+    
+    // Sprites menos usados (lazy load)
     this.load.image('coffee',     '/sprites/coffee-maker.png')
     this.load.image('water',      '/sprites/water-cooler.png')
     this.load.image('cabinet',    '/sprites/cabinet.png')
@@ -99,8 +127,11 @@ export default class MainScene extends Phaser.Scene {
     this.load.json('map', '/maps/office-map.json')
   }
 
-  /** Gera texturas procedurais usadas como objetos de mobília */
+  /** Gera texturas procedurais usadas como objetos de mobília (com cache) */
   private createProceduralAssets() {
+    // Verifica se já foram criadas (evita recriar em restart)
+    if (this.textures.exists('monitor')) return
+
     const g = this.make.graphics({ x: 0, y: 0 })
 
     g.fillStyle(0x2c3e50, 1).fillRect(4, 2, 24, 20)
@@ -145,7 +176,8 @@ export default class MainScene extends Phaser.Scene {
     if (this.socket?.connected) {
       this.socket.off() // remove listeners antigos antes de registrar novos
     } else {
-      this.socket = io()
+      // Conexão socket otimizada com timeout reduzido
+      this.socket = io({ timeout: 3000, reconnection: true, reconnectionDelay: 500 })
     }
 
     this.createPlayer()
@@ -589,7 +621,7 @@ export default class MainScene extends Phaser.Scene {
     let velocityY = 0
     let isMoving = false
 
-    if (!this.isTyping && !this.isMenuOpen) {
+    if (!this.isTyping && !this.isMenuOpen && !this.isPanelOpen) {
       if (this.cursors.left.isDown || this.wasd.A.isDown) {
         velocityX = -speed
         this.lastDirection = 'left'

@@ -10,6 +10,9 @@ Uma plataforma de escritório 2D online em tempo real, construída com Next.js, 
 - 💬 **Chat em Tempo Real**: Converse com outros usuários através do chat integrado
 - 🎨 **Avatares Coloridos**: Cada jogador tem um avatar único com cor aleatória
 - 📱 **Design Responsivo**: Funciona em diferentes tamanhos de tela
+- 🔐 **Autenticação Flexível**: Login simples por nome ou via GitHub OAuth
+- 🔗 **Integração GitHub**: Painel com visualização de repositório, issues, PRs e commits
+- 📊 **GitHub Projects**: Issues organizadas por status (backlog, sprint, test) do seu projeto
 
 ## 🛠️ Tecnologias
 
@@ -64,10 +67,16 @@ http://localhost:3000
 
 ## 🎮 Como Usar
 
-1. Digite seu nome na tela inicial
-2. Clique em "Entrar no Escritório"
-3. Use as teclas **WASD** ou **setas do teclado** para mover seu avatar
-4. Use o **chat** no canto inferior direito para conversar
+1. **Escolha uma forma de login:**
+   - **Login Simples**: Digite seu nome e clique em "Entrar no Escritório"
+   - **Login GitHub**: Clique em "Entrar com GitHub" para usar sua conta GitHub e avatar personalizado
+
+2. Use as teclas **WASD** ou **setas do teclado** para mover seu avatar
+
+3. Use o **chat** no canto inferior direito para conversar
+
+4. Abra o **painel GitHub** no canto superior direito para ver informações do repositório
+
 5. Abra em múltiplas abas/navegadores para testar o multiplayer!
 
 ## 📁 Estrutura do Projeto
@@ -115,6 +124,76 @@ Os arquivos CSS Module permitem customizar facilmente:
 - **Novos eventos de rede**: Adicione no servidor (`server/server.js`) e no cliente (`MainScene.ts`)
 
 ## 🔧 Configurações
+
+### Variáveis de Ambiente
+
+Crie um arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
+
+```bash
+# GitHub API (para integração de repositório e GitHub Projects)
+GITHUB_TOKEN=seu_token_pessoal_github
+GITHUB_OWNER=phrigapov
+GITHUB_REPO=escritorio
+GITHUB_ORG=sismacke
+GITHUB_PROJECT_NUMBER=1
+
+# GitHub OAuth (para autenticação)
+GITHUB_CLIENT_ID=seu_client_id
+GITHUB_CLIENT_SECRET=seu_client_secret
+GITHUB_REDIRECT_URI=http://localhost:3000/api/auth/callback
+```
+
+**Nota**: O `GITHUB_TOKEN` precisa ter os scopes `read:project` e `repo`.
+
+### Configurar GitHub OAuth App
+
+Para habilitar o login com GitHub:
+
+1. **Acesse as configurações do GitHub:**
+   - Vá para: https://github.com/settings/developers
+   - Clique em "New OAuth App"
+
+2. **Preencha os dados:**
+   - **Application name**: Escritório Virtual
+   - **Homepage URL**: `http://localhost:3000`
+   - **Authorization callback URL**: `http://localhost:3000/api/auth/callback`
+
+3. **Copie as credenciais:**
+   - Após criar, copie o **Client ID**
+   - Clique em "Generate a new client secret" e copie o **Client Secret**
+
+4. **Configure no `.env.local`:**
+   ```bash
+   GITHUB_CLIENT_ID=seu_client_id_aqui
+   GITHUB_CLIENT_SECRET=seu_client_secret_aqui
+   ```
+
+5. **Para produção:**
+   - Crie um novo OAuth App com as URLs de produção
+   - Atualize o `GITHUB_REDIRECT_URI` para a URL de produção
+
+### Configurar GitHub Projects
+
+O painel GitHub exibe issues organizadas por status usando **GitHub Projects (Beta)**.
+
+1. **Prepare seu projeto:**
+   - Crie ou use um projeto existente na sua organização
+   - Adicione um campo personalizado chamado **"Status"**
+   - Configure valores que incluam "backlog", "sprint" e "test"
+
+2. **Configure as variáveis de ambiente:**
+   ```bash
+   GITHUB_ORG=sismacke
+   GITHUB_PROJECT_NUMBER=1
+   ```
+
+3. **Atualize as permissões do token:**
+   - Seu `GITHUB_TOKEN` precisa ter o scope `read:project`
+   - Acesse https://github.com/settings/tokens para criar/atualizar
+
+4. **Documentação completa:**
+   - Consulte [GITHUB_PROJECTS.md](./GITHUB_PROJECTS.md) para mais detalhes
+   - Inclui instruções de troubleshooting e personalização
 
 ### Porta do Servidor
 

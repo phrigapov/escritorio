@@ -1,5 +1,27 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Otimizações de performance
+  compress: true,
+  poweredByHeader: false,
+  
+  // Cache agressivo para assets estáticos
+  async headers() {
+    return [
+      {
+        source: '/sprites/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/maps/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=3600, must-revalidate' },
+        ],
+      },
+    ]
+  },
+
   webpack: (config, { isServer, dev }) => {
     // Phaser é carregado via CDN (ver layout.tsx) — não bundlar, economiza ~400MB na compilação
     if (!isServer) {

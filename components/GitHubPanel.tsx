@@ -19,6 +19,7 @@ interface GHIssue {
   state: string
   labels: { name: string; color: string }[]
   author: string
+  assignees: string[]
   createdAt: string
   url: string
 }
@@ -42,11 +43,14 @@ interface GHCommit {
 interface GHData {
   repo: GHRepo
   issues: GHIssue[]
+  backlog: GHIssue[]
+  sprint: GHIssue[]
+  test: GHIssue[]
   pulls: GHPull[]
   commits: GHCommit[]
 }
 
-type Tab = 'overview' | 'issues' | 'pulls' | 'commits'
+type Tab = 'overview' | 'backlog' | 'sprint' | 'test' | 'pulls' | 'commits'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function relativeTime(iso: string): string {
@@ -82,15 +86,16 @@ function LabelBadge({ name, color }: { name: string; color: string }) {
 function tabStyle(active: boolean): React.CSSProperties {
   return {
     flex: 1,
-    padding: '6px 0',
+    padding: '5px 4px',
     background: active ? '#1a2060' : 'transparent',
     border: 'none',
     borderBottom: active ? '2px solid #4a7aff' : '2px solid transparent',
     color: active ? '#fff' : '#666',
     cursor: 'pointer',
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'inherit',
     transition: 'color 0.15s',
+    whiteSpace: 'nowrap',
   }
 }
 
@@ -125,9 +130,10 @@ const S: Record<string, React.CSSProperties> = {
   },
   tabBar: {
     display: 'flex',
-    gap: 2,
-    padding: '0 14px',
+    gap: 1,
+    padding: '0 8px',
     marginTop: 8,
+    overflowX: 'auto',
   },
   body: {
     flex: 1,
@@ -219,19 +225,22 @@ const S: Record<string, React.CSSProperties> = {
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function GitHubPanel({ onClose }: { onClose: () => void }) {
-  const [tab, setTab]       = useState<Tab>('overview')
+export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () => void; defaultUsername?: string }) {
+  const [tab, setTab]       = useState<Tab>('sprint')
   const [data, setData]     = useState<GHData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]   = useState<string | null>(null)
   const [lastFetch, setLastFetch] = useState<Date | null>(null)
+  const [selectedUsername, setSelectedUsername] = useState(defaultUsername || '')
+  const [inputUsername, setInputUsername] = useState(defaultUsername || '')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/github')
+      const url = selectedUsername ? `/api/github?username=${encodeURIComponent(selectedUsername)}` : '/api/github'
+      const res = await fetch(url)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
       if (json.error) throw new Error(json.error)
@@ -242,7 +251,7 @@ export default function GitHubPanel({ onClose }: { onClose: () => void }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [selectedUsername])
 
   useEffect(() => {
     fetchData()
@@ -256,7 +265,12 @@ export default function GitHubPanel({ onClose }: { onClose: () => void }) {
   const openUrl = (url: string) => window.open(url, '_blank', 'noopener,noreferrer')
 
   return (
-    <div style={S.panel}>
+    <div 
+      style={S.panel}
+      onKeyDown={(e) => e.stopPropagation()}
+      onKeyUp={(e) => e.stopPropagation()}
+      onKeyPress={(e) => e.stopPropagation()}
+    >
       {/* Header */}
       <div style={S.header}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -269,6 +283,52 @@ export default function GitHubPanel({ onClose }: { onClose: () => void }) {
               ↺ Atualizar
             </button>
             <button style={S.closeBtn} onClick={onClose} title="Fechar (G)">✕</button>
+          </div>
+        </div>
+        
+        {/* Seletor de usuário */}
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input
+              type="text"
+              value={inputUsername}
+              onChange={(e) => setInputUsername(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setSelectedUsername(inputUsername)
+                }
+              }}
+              placeholder="Usuário GitHub"
+              style={{
+                flex: 1,
+                background: '#0e1228',
+                border: '1px solid #1c2040',
+                borderRadius: 5,
+                color: '#d0d8ff',
+                padding: '4px 8px',
+                fontSize: 11,
+                fontFamily: 'inherit',
+                outline: 'none',
+              }}
+            />
+            <button
+              onClick={() => setSelectedUsername(inputUsername)}
+              style={{
+                background: '#1a2060',
+                border: '1px solid #2a3080',
+                borderRadius: 5,
+                color: '#4a7aff',
+                cursor: 'pointer',
+                fontSize: 11,
+                padding: '4px 10px',
+                fontFamily: 'inherit',
+              }}
+            >
+              Buscar
+            </button>
+          </div>
+          <div style={{ fontSize: 9, color: '#4a5080', marginTop: 4 }}>
+            Mostrando issues atribuídas a: <strong style={{ color: '#4a7aff' }}>{selectedUsername || 'nenhum usuário'}</strong>
           </div>
         </div>
 
@@ -287,12 +347,26 @@ export default function GitHubPanel({ onClose }: { onClose: () => void }) {
         {/* Tabs */}
         <div style={S.tabBar}>
           {([
-            ['overview', '📊 Visão'],
-            ['issues',   `🐛 Issues ${data ? `(${data.issues.length})` : ''}`],
-            ['pulls',    `🔀 PRs ${data ? `(${data.pulls.length})` : ''}`],
-            ['commits',  '📌 Commits'],
+            ['overview', '📊'],
+            ['backlog',  `📋 ${data ? data.backlog.length : ''}`],
+            ['sprint',   `🏃 ${data ? data.sprint.length : ''}`],
+            ['test',     `🧪 ${data ? data.test.length : ''}`],
+            ['pulls',    `🔀 ${data ? data.pulls.length : ''}`],
+            ['commits',  '📌'],
           ] as [Tab, string][]).map(([id, label]) => (
-            <button key={id} style={tabStyle(tab === id)} onClick={() => setTab(id)}>
+            <button 
+              key={id} 
+              style={tabStyle(tab === id)} 
+              onClick={() => setTab(id)}
+              title={
+                id === 'overview' ? 'Visão Geral' :
+                id === 'backlog' ? 'Backlog' :
+                id === 'sprint' ? 'Sprint' :
+                id === 'test' ? 'Em Teste' :
+                id === 'pulls' ? 'Pull Requests' :
+                'Commits'
+              }
+            >
               {label}
             </button>
           ))}
@@ -335,6 +409,28 @@ export default function GitHubPanel({ onClose }: { onClose: () => void }) {
                       {data.repo.openIssues}
                     </span>
                     <span style={S.statLabel}>Issues</span>
+                  </div>
+                </div>
+
+                <p style={S.sectionTitle}>Issues do Projeto</p>
+                <div style={S.statBox}>
+                  <div style={S.stat}>
+                    <span style={{ ...S.statVal, color: '#10b981', fontSize: 18 }}>
+                      🏃 {data.sprint.length}
+                    </span>
+                    <span style={S.statLabel}>Sprint</span>
+                  </div>
+                  <div style={S.stat}>
+                    <span style={{ ...S.statVal, color: '#fbbf24', fontSize: 18 }}>
+                      📋 {data.backlog.length}
+                    </span>
+                    <span style={S.statLabel}>Backlog</span>
+                  </div>
+                  <div style={S.stat}>
+                    <span style={{ ...S.statVal, color: '#8b5cf6', fontSize: 18 }}>
+                      🧪 {data.test.length}
+                    </span>
+                    <span style={S.statLabel}>Test</span>
                   </div>
                 </div>
 
@@ -396,35 +492,119 @@ export default function GitHubPanel({ onClose }: { onClose: () => void }) {
               </>
             )}
 
-            {/* ── Issues ── */}
-            {tab === 'issues' && (
+            {/* ── Backlog ── */}
+            {tab === 'backlog' && (
               <>
-                {data.issues.length === 0 ? (
+                {data.backlog.length === 0 ? (
                   <div style={S.emptyState}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>🎉</div>
-                    Nenhuma issue aberta!
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
+                    Nenhuma issue no backlog
                   </div>
                 ) : (
-                  data.issues.map(i => (
-                    <div
-                      key={i.number}
-                      style={S.card}
-                      onClick={() => openUrl(i.url)}
-                      onMouseEnter={e => (e.currentTarget.style.borderColor = '#4a7aff')}
-                      onMouseLeave={e => (e.currentTarget.style.borderColor = '#1c2040')}
-                    >
-                      <p style={S.cardTitle}>#{i.number} {i.title}</p>
-                      <div style={S.cardMeta}>
-                        <span>{i.author}</span>
-                        <span>{relativeTime(i.createdAt)}</span>
-                      </div>
-                      {i.labels.length > 0 && (
-                        <div style={{ marginTop: 5 }}>
-                          {i.labels.map(l => <LabelBadge key={l.name} {...l} />)}
+                  <>
+                    <p style={S.sectionTitle}>Issues no Backlog</p>
+                    {data.backlog.map(i => (
+                      <div
+                        key={i.number}
+                        style={S.card}
+                        onClick={() => openUrl(i.url)}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = '#4a7aff')}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#1c2040')}
+                      >
+                        <p style={S.cardTitle}>#{i.number} {i.title}</p>
+                        <div style={S.cardMeta}>
+                          <span>por {i.author}</span>
+                          {i.assignees.length > 0 && (
+                            <span>→ {i.assignees.join(', ')}</span>
+                          )}
+                          <span>{relativeTime(i.createdAt)}</span>
                         </div>
-                      )}
-                    </div>
-                  ))
+                        {i.labels.filter(l => l.name !== 'backlog').length > 0 && (
+                          <div style={{ marginTop: 5 }}>
+                            {i.labels.filter(l => l.name !== 'backlog').map(l => <LabelBadge key={l.name} {...l} />)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+
+            {/* ── Sprint ── */}
+            {tab === 'sprint' && (
+              <>
+                {data.sprint.length === 0 ? (
+                  <div style={S.emptyState}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>🏃</div>
+                    Nenhuma issue na sprint atual
+                  </div>
+                ) : (
+                  <>
+                    <p style={S.sectionTitle}>Issues na Sprint</p>
+                    {data.sprint.map(i => (
+                      <div
+                        key={i.number}
+                        style={S.card}
+                        onClick={() => openUrl(i.url)}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = '#4a7aff')}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#1c2040')}
+                      >
+                        <p style={S.cardTitle}>#{i.number} {i.title}</p>
+                        <div style={S.cardMeta}>
+                          <span>por {i.author}</span>
+                          {i.assignees.length > 0 && (
+                            <span>→ {i.assignees.join(', ')}</span>
+                          )}
+                          <span>{relativeTime(i.createdAt)}</span>
+                        </div>
+                        {i.labels.filter(l => l.name !== 'sprint').length > 0 && (
+                          <div style={{ marginTop: 5 }}>
+                            {i.labels.filter(l => l.name !== 'sprint').map(l => <LabelBadge key={l.name} {...l} />)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+
+            {/* ── Test ── */}
+            {tab === 'test' && (
+              <>
+                {data.test.length === 0 ? (
+                  <div style={S.emptyState}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>🧪</div>
+                    Nenhuma issue em teste
+                  </div>
+                ) : (
+                  <>
+                    <p style={S.sectionTitle}>Issues em Teste</p>
+                    {data.test.map(i => (
+                      <div
+                        key={i.number}
+                        style={S.card}
+                        onClick={() => openUrl(i.url)}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = '#4a7aff')}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#1c2040')}
+                      >
+                        <p style={S.cardTitle}>#{i.number} {i.title}</p>
+                        <div style={S.cardMeta}>
+                          <span>por {i.author}</span>
+                          {i.assignees.length > 0 && (
+                            <span>→ {i.assignees.join(', ')}</span>
+                          )}
+                          <span>{relativeTime(i.createdAt)}</span>
+                        </div>
+                        {i.labels.length > 0 && (
+                          <div style={{ marginTop: 5 }}>
+                            {i.labels.map(l => <LabelBadge key={l.name} {...l} />)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
                 )}
               </>
             )}

@@ -182,7 +182,12 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={S.panel()}>
+    <div 
+      style={S.panel()}
+      onKeyDown={(e) => e.stopPropagation()}
+      onKeyUp={(e) => e.stopPropagation()}
+      onKeyPress={(e) => e.stopPropagation()}
+    >
 
       {/* Cabeçalho */}
       <div style={{ ...S.sec(), display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

@@ -68,15 +68,21 @@ export class MapLoader {
     const colorA = this.parseColor(space.floor?.colorA, '#e8e8e8')
     const colorB = this.parseColor(space.floor?.colorB, '#f5f5f5')
 
-    // Piso em xadrez
-    for (let tx = 0; tx < space.width; tx += tileSize) {
-      for (let ty = 0; ty < space.height; ty += tileSize) {
-        const col = (Math.floor(tx / tileSize) + Math.floor(ty / tileSize)) % 2 === 0 ? colorA : colorB
-        this.scene.add
-          .rectangle(ox + tx + tileSize / 2, oy + ty + tileSize / 2, tileSize, tileSize, col)
-          .setDepth(0)
+    // Piso em xadrez otimizado (usando render texture para batch rendering)
+    const floorKey = `floor_${ox}_${oy}_${space.width}_${space.height}`
+    if (!this.scene.textures.exists(floorKey)) {
+      const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false })
+      for (let tx = 0; tx < space.width; tx += tileSize) {
+        for (let ty = 0; ty < space.height; ty += tileSize) {
+          const col = (Math.floor(tx / tileSize) + Math.floor(ty / tileSize)) % 2 === 0 ? colorA : colorB
+          graphics.fillStyle(col, 1)
+          graphics.fillRect(tx, ty, tileSize, tileSize)
+        }
       }
+      graphics.generateTexture(floorKey, space.width, space.height)
+      graphics.destroy()
     }
+    this.scene.add.image(ox, oy, floorKey).setOrigin(0, 0).setDepth(0)
 
     // Nome do espaço
     this.scene.add
