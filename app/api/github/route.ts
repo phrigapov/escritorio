@@ -36,110 +36,85 @@ async function ghGraphQL(query: string, variables: any = {}) {
   return json.data
 }
 
-// Buscar issues do projeto filtradas por usuário (apenas abertas)
-async function getProjectItemsForUser(org: string, projectNumber: number, username: string) {
-  console.log(`[DEBUG] Buscando issues abertas atribuídas a: ${username}`)
-  
-  const itemFragment = `
-    id
-    content {
-      ... on Issue {
-        number
-        title
-        state
-        url
-        createdAt
-        author {
-          login
-        }
-        assignees(first: 10) {
-          nodes {
-            login
-          }
-        }
-        labels(first: 20) {
-          nodes {
-            name
-            color
-          }
-        }
-      }
-    }
-    fieldValues(first: 20) {
-      nodes {
-        ... on ProjectV2ItemFieldSingleSelectValue {
-          name
-          field {
-            ... on ProjectV2SingleSelectField {
-              name
-            }
-          }
-        }
-        ... on ProjectV2ItemFieldTextValue {
-          text
-          field {
-            ... on ProjectV2Field {
-              name
-            }
-          }
-        }
-      }
-    }
-  `
+// Cache em memória por usuário (funciona com custom server Node.js)
+interface IssueCacheEntry {
+  issues: any[]
+  timestamp: number
+}
+const issueCache = new Map<string, IssueCacheEntry>()
+const CACHE_TTL = 2 * 60 * 1000 // 2 minutos
 
-  // Buscar todas as issues do usuário (paginação otimizada)
-  let allItems: any[] = []
-  let hasNextPage = true
+// Busca issues abertas do usuário diretamente via GraphQL search (muito mais rápido que
+// iterar todas as issues do projeto — o GitHub filtra server-side por assignee)
+async function getOpenIssuesForUser(owner: string, repo: string, username: string, projectNumber: number) {
+  const cacheKey = `${owner}/${repo}:${username}`
+  const cached = issueCache.get(cacheKey)
+
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`[CACHE] Hit para ${username}: ${cached.issues.length} issues`)
+    return cached.issues
+  }
+
+  console.log(`[SEARCH] Buscando issues abertas de: ${username}`)
+  const allIssues: any[] = []
   let cursor: string | null = null
-  let pageCount = 0
+  let hasNextPage = true
 
-  while (hasNextPage && pageCount < 10) { // Máximo 10 páginas
-    pageCount++
+  while (hasNextPage) {
     const query = `
-      query($org: String!, $projectNumber: Int!, $cursor: String) {
-        organization(login: $org) {
-          projectV2(number: $projectNumber) {
-            id
-            title
-            items(first: 100, after: $cursor) {
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
-              nodes {
-                ${itemFragment}
+      query($searchQuery: String!, $cursor: String) {
+        search(query: $searchQuery, type: ISSUE, first: 100, after: $cursor) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            ... on Issue {
+              number
+              title
+              state
+              url
+              createdAt
+              author { login }
+              assignees(first: 10) { nodes { login } }
+              labels(first: 20) { nodes { name color } }
+              projectItems(first: 10, includeArchived: false) {
+                nodes {
+                  project { number }
+                  fieldValues(first: 20) {
+                    nodes {
+                      ... on ProjectV2ItemFieldSingleSelectValue {
+                        name
+                        field {
+                          ... on ProjectV2SingleSelectField { name }
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
         }
       }
     `
-    
-    const data = await ghGraphQL(query, { org, projectNumber, cursor })
-    const itemsData = data.organization?.projectV2?.items
-    
-    if (itemsData?.nodes) {
-      // Filtrar apenas issues abertas do usuário
-      const filteredItems = itemsData.nodes.filter((item: any) => {
-        const content = item.content
-        if (!content || content.state !== 'OPEN') return false
-        
-        const assignees = content.assignees?.nodes?.map((a: any) => a.login) || []
-        return assignees.includes(username)
-      })
-      
-      allItems = allItems.concat(filteredItems)
-      hasNextPage = itemsData.pageInfo.hasNextPage
-      cursor = itemsData.pageInfo.endCursor
-      
-      console.log(`[DEBUG] Página ${pageCount}: ${filteredItems.length} issues do usuário (de ${itemsData.nodes.length} total)`)
-    } else {
-      hasNextPage = false
-    }
+
+    const data = await ghGraphQL(query, {
+      searchQuery: `is:issue is:open assignee:${username} repo:${owner}/${repo}`,
+      cursor,
+    })
+
+    const search = data.search
+    if (!search?.nodes) break
+
+    allIssues.push(...search.nodes.filter((n: any) => n?.number !== undefined))
+    hasNextPage = search.pageInfo.hasNextPage
+    cursor = search.pageInfo.endCursor
   }
-  
-  console.log(`[DEBUG] Total encontrado: ${allItems.length} issues abertas de ${username}`)
-  return allItems
+
+  issueCache.set(cacheKey, { issues: allIssues, timestamp: Date.now() })
+  console.log(`[SEARCH] ${username}: ${allIssues.length} issues abertas encontradas`)
+  return allIssues
 }
 
 export async function GET(req: NextRequest) {
@@ -170,102 +145,55 @@ export async function GET(req: NextRequest) {
 
     try {
       if (!username) {
-        console.log(`[DEBUG] Nenhum usuário fornecido, retornando listas vazias`)
+        console.log(`[INFO] Nenhum usuário fornecido, retornando listas vazias`)
         throw new Error('Username obrigatório')
       }
-      
-      const items = await getProjectItemsForUser(ORG, parseInt(PROJECT_NUMBER), username)
-      console.log(`[DEBUG] Processando ${items.length} issues abertas de ${username}`)
-      
-      // Verificar se issue #7076 está nos resultados
-      const issue7076 = items.find((item: any) => item.content?.number === 7076)
-      if (issue7076) {
-        console.log(`[DEBUG] ✓ Issue #7076 ENCONTRADA`)
-        const statusField7076 = issue7076.fieldValues?.nodes?.find((f: any) => f.field?.name?.toLowerCase() === 'status')
-        console.log(`[DEBUG] Issue #7076 Status: ${statusField7076?.name || 'sem status'}`)
-      }
 
-      // Processar items do projeto
-      let processedCount = 0
-      
-      items.forEach((item: any) => {
-        const content = item.content
-        if (!content) return
-        
-        processedCount++
+      const rawIssues = await getOpenIssuesForUser(OWNER!, REPO!, username, parseInt(PROJECT_NUMBER))
+      console.log(`[INFO] Processando ${rawIssues.length} issues de ${username}`)
 
-        // Pegar o valor do campo Status
-        const statusField = item.fieldValues?.nodes?.find(
-          (field: any) => field.field?.name?.toLowerCase() === 'status'
+      rawIssues.forEach((issue: any) => {
+        // Localizar o item do projeto correto pelo número do projeto
+        const projectItem = issue.projectItems?.nodes?.find(
+          (p: any) => p.project?.number === parseInt(PROJECT_NUMBER)
+        ) ?? issue.projectItems?.nodes?.[0]
+
+        const statusField = projectItem?.fieldValues?.nodes?.find(
+          (f: any) => f.field?.name?.toLowerCase() === 'status'
         )
         const status = statusField?.name?.toLowerCase() || ''
 
-        const issue = {
-          number: content.number,
-          title: content.title,
-          state: content.state,
-          labels: (content.labels?.nodes || []).map((l: any) => ({
+        const normalized = {
+          number: issue.number,
+          title: issue.title,
+          state: issue.state,
+          labels: (issue.labels?.nodes || []).map((l: any) => ({
             name: l.name,
             color: l.color,
           })),
-          author: content.author?.login || 'unknown',
-          assignees: (content.assignees?.nodes || []).map((a: any) => a.login),
-          createdAt: content.createdAt,
-          url: content.url,
-          status: status,
+          author: issue.author?.login || 'unknown',
+          assignees: (issue.assignees?.nodes || []).map((a: any) => a.login),
+          createdAt: issue.createdAt,
+          url: issue.url,
+          status,
         }
-        
-        // Log simplificado (primeiras 20 issues)
-        const categoryInfo = status.includes('sprint') ? 'Sprint' : 
-                            status.includes('backlog') ? 'Backlog' : 
-                            status.includes('test') || status.includes('teste') ? 'Test' : 
-                            status ? `Outro(${status})` : 'Sem status'
-        
-        if (processedCount <= 20) {
-          console.log(`[DEBUG] #${issue.number} | ${categoryInfo} | Status: "${statusField?.name}"`)
-        }
-        
-        // Todas as issues já são do usuário (filtro feito na query)
-        myIssues.push(issue)
-        
-        // Categorizar por status (aceita variações como "Backlogs" e "backlog")
+
+        myIssues.push(normalized)
+
         if (status.includes('sprint')) {
-          sprintIssues.push(issue)
+          sprintIssues.push(normalized)
         } else if (status.includes('backlog')) {
-          backlogIssues.push(issue)
+          backlogIssues.push(normalized)
         } else if (status.includes('test') || status.includes('teste')) {
-          testIssues.push(issue)
+          testIssues.push(normalized)
         }
       })
-      
-      console.log(`\n[DEBUG] Estatísticas:`)
-      console.log(`  Issues processadas: ${processedCount}`)
-      console.log(`  Usuário: ${username}`)
-      console.log(`  Sprint: ${sprintIssues.length}`)
-      console.log(`  Backlog: ${backlogIssues.length}`)
-      console.log(`  Test: ${testIssues.length}`)
-      
-    } catch (projectError) {
-      console.error('Erro ao buscar projeto:', projectError)
-      // Se falhar, continua sem dados do projeto
-    }
 
-    console.log(`\n[DEBUG] RESUMO:`)
-    console.log(`  Total processado: ${sprintIssues.length + backlogIssues.length + testIssues.length} issues`)
-    console.log(`  My Issues: ${myIssues.length} - [${myIssues.map(i => `#${i.number}`).join(', ')}]`)
-    console.log(`  Sprint: ${sprintIssues.length} - [${sprintIssues.map(i => `#${i.number}`).join(', ')}]`)
-    console.log(`  Backlog: ${backlogIssues.length} - [${backlogIssues.map(i => `#${i.number}`).join(', ')}]`)
-    console.log(`  Test: ${testIssues.length} - [${testIssues.map(i => `#${i.number}`).join(', ')}]`)
-    
-    // Verificar issue #7076 especificamente
-    const all = [...sprintIssues, ...backlogIssues, ...testIssues]
-    const has7076 = all.find(i => i.number === 7076)
-    if (has7076) {
-      console.log(`  ✓ Issue #7076 presente na categoria: ${has7076.status}`)
-    } else {
-      console.log(`  ✗ Issue #7076 NÃO encontrada nas categorias`)
+      console.log(`[INFO] Sprint: ${sprintIssues.length} | Backlog: ${backlogIssues.length} | Test: ${testIssues.length}`)
+
+    } catch (projectError) {
+      console.error('Erro ao buscar issues:', projectError)
     }
-    console.log()
 
     return NextResponse.json({
       repo: {
