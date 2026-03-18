@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { RefreshCw, X, GitBranch, GitCommit, GitPullRequest, Bug, Layers, FlaskConical, BarChart3, GripVertical } from 'lucide-react'
+import IssueDetailView from './IssueDetailView'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface GHRepo {
@@ -58,6 +60,10 @@ interface GHData {
 
 type Tab = 'overview' | 'backlog' | 'sprint' | 'test' | 'pulls' | 'commits'
 
+const DEFAULT_WIDTH = 420
+const MIN_WIDTH = 320
+const MAX_WIDTH = 900
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -75,8 +81,9 @@ function LabelBadge({ name, color }: { name: string; color: string }) {
   const fg = parseInt(color, 16) > 0x888888 ? '#111' : '#fff'
   return (
     <Badge
+      variant="outline"
       style={{ background: `#${color}`, color: fg, borderColor: 'transparent' }}
-      className="text-[9px] px-1.5 py-0 h-4 rounded-full font-semibold mr-1"
+      className="rounded-full font-semibold mr-1"
     >
       {name}
     </Badge>
@@ -88,7 +95,8 @@ function ItemCard({ onClick, children }: { onClick?: () => void; children: React
   return (
     <Card
       onClick={onClick}
-      className="bg-[#0e1228] border-[#1c2040] rounded-lg px-3 py-2.5 mb-2 cursor-pointer transition-colors hover:border-[#4a7aff] text-inherit gap-0"
+      size="sm"
+      className="bg-card rounded-lg px-3 py-2.5 mb-2 cursor-pointer transition-colors hover:bg-accent gap-1"
     >
       {children}
     </Card>
@@ -98,16 +106,16 @@ function ItemCard({ onClick, children }: { onClick?: () => void; children: React
 function IssueCard({ issue, onClick }: { issue: GHIssue; onClick: () => void }) {
   return (
     <ItemCard onClick={onClick}>
-      <p className="text-xs text-[#d0d8ff] mb-1 leading-snug font-medium">
+      <p className="text-sm text-card-foreground leading-snug font-medium">
         #{issue.number} {issue.title}
       </p>
-      <div className="flex flex-wrap gap-2 text-[10px] text-[#4a5080] items-center">
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
         <span>por {issue.author}</span>
         {issue.assignees.length > 0 && <span>→ {issue.assignees.join(', ')}</span>}
         <span>{relativeTime(issue.createdAt)}</span>
       </div>
       {issue.labels.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-0">
+        <div className="mt-1 flex flex-wrap gap-1">
           {issue.labels.map(l => <LabelBadge key={l.name} {...l} />)}
         </div>
       )}
@@ -116,10 +124,10 @@ function IssueCard({ issue, onClick }: { issue: GHIssue; onClick: () => void }) 
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
-function EmptyState({ emoji, text }: { emoji: string; text: string }) {
+function EmptyState({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div className="text-center text-[#333a60] py-8 text-xs">
-      <div className="text-2xl mb-2">{emoji}</div>
+    <div className="text-center text-muted-foreground py-8 text-sm">
+      <div className="text-2xl mb-2 flex justify-center">{icon}</div>
       {text}
     </div>
   )
@@ -136,6 +144,39 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
   const [inputUsername, setInputUsername] = useState(defaultUsername || '')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // ── Issue detail state ──────────────────────────────────────────────────────
+  const [selectedIssue, setSelectedIssue] = useState<number | null>(null)
+
+  // ── Resizable panel state ───────────────────────────────────────────────────
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH)
+  const isResizing = useRef(false)
+  const startX = useRef(0)
+  const startWidth = useRef(DEFAULT_WIDTH)
+
+  const onResizeStart = useCallback((e: React.PointerEvent) => {
+    isResizing.current = true
+    startX.current = e.clientX
+    startWidth.current = panelWidth
+    e.currentTarget.setPointerCapture(e.pointerId)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [panelWidth])
+
+  const onResizeMove = useCallback((e: React.PointerEvent) => {
+    if (!isResizing.current) return
+    const delta = startX.current - e.clientX
+    const maxW = Math.min(MAX_WIDTH, window.innerWidth * 0.85)
+    const newWidth = Math.max(MIN_WIDTH, Math.min(maxW, startWidth.current + delta))
+    setPanelWidth(newWidth)
+  }, [])
+
+  const onResizeEnd = useCallback(() => {
+    isResizing.current = false
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }, [])
+
+  // ── Data fetching ───────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -164,71 +205,109 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
 
   const openUrl = (url: string) => window.open(url, '_blank', 'noopener,noreferrer')
 
+  // ── Se uma issue esta selecionada, mostrar detalhe ────────────────────────
+  if (selectedIssue !== null) {
+    return (
+      <div
+        className="dark relative flex shrink-0 flex-col overflow-hidden border-l border-border bg-background text-sm text-foreground"
+        style={{ width: panelWidth }}
+        onKeyDown={(e) => e.stopPropagation()}
+        onKeyUp={(e) => e.stopPropagation()}
+      >
+        {/* Drag handle */}
+        <div
+          className="absolute inset-y-0 left-0 w-1.5 z-10 cursor-col-resize hover:bg-accent active:bg-accent transition-colors flex items-center"
+          onPointerDown={onResizeStart}
+          onPointerMove={onResizeMove}
+          onPointerUp={onResizeEnd}
+          onPointerCancel={onResizeEnd}
+        >
+          <GripVertical className="size-3 text-muted-foreground opacity-0 hover:opacity-100 transition-opacity" />
+        </div>
+
+        <IssueDetailView
+          issueNumber={selectedIssue}
+          onBack={() => setSelectedIssue(null)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div
-      className="dark fixed inset-y-0 right-0 z-[1300] flex w-[min(100vw,420px)] flex-col overflow-hidden border-l border-[#1c2040] bg-[rgba(8,10,22,0.97)] text-[13px] text-[#e0e0e0] backdrop-blur-sm"
+      className="dark fixed inset-y-0 right-0 z-[1300] flex flex-col overflow-hidden border-l border-border bg-background text-sm text-foreground"
+      style={{ width: Math.min(panelWidth, window.innerWidth) }}
       onKeyDown={(e) => e.stopPropagation()}
       onKeyUp={(e) => e.stopPropagation()}
     >
+      {/* Drag handle */}
+      <div
+        className="absolute inset-y-0 left-0 w-1.5 z-10 cursor-col-resize hover:bg-accent active:bg-accent transition-colors"
+        onPointerDown={onResizeStart}
+        onPointerMove={onResizeMove}
+        onPointerUp={onResizeEnd}
+        onPointerCancel={onResizeEnd}
+      />
+
       {/* Header */}
-      <div className="shrink-0 border-b border-[#1c2040] px-3 pt-3 sm:px-3.5 sm:pt-3.5">
-        {/* Título + botões */}
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-bold text-[#d0d8ff]">
-            🐙 {data ? data.repo.fullName : 'GitHub'}
+      <div className="shrink-0 border-b border-border px-4 pt-4 pb-3">
+        {/* Titulo + botoes */}
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <span className="truncate text-base font-semibold text-foreground">
+            {data ? data.repo.fullName : 'GitHub'}
           </span>
           <div className="flex items-center gap-1.5">
             <Button
               variant="outline"
-              size="xs"
+              size="sm"
               onClick={fetchData}
-              className="h-6 border-[#1c2040] bg-transparent px-2 text-[10px] text-[#4a7aff] hover:bg-[#1c2040] hover:text-[#7ab4ff]"
+              className="gap-1"
             >
-              ↺ Atualizar
+              <RefreshCw className="size-3.5" />
+              Atualizar
             </Button>
             <Button
               variant="ghost"
-              size="icon-xs"
+              size="icon-sm"
               onClick={onClose}
-              className="text-[#4a5080] hover:bg-transparent hover:text-[#e0e0e0]"
               title="Fechar (G)"
             >
-              ✕
+              <X className="size-4" />
             </Button>
           </div>
         </div>
 
-        {/* Seletor de usuário */}
-        <div className="mb-2.5">
-          <div className="flex items-center gap-1.5">
+        {/* Seletor de usuario */}
+        <div className="mb-2">
+          <div className="flex items-center gap-2">
             <Input
               value={inputUsername}
               onChange={(e) => setInputUsername(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') setSelectedUsername(inputUsername)
               }}
-              placeholder="Usuário GitHub"
-              className="h-7 border-[#1c2040] bg-[#0e1228] text-[11px] text-[#d0d8ff] placeholder:text-[#3a4060] focus-visible:border-[#4a7aff] focus-visible:ring-[#4a7aff]/20"
+              placeholder="Usuario GitHub"
+              className="text-sm"
             />
             <Button
               size="sm"
               onClick={() => setSelectedUsername(inputUsername)}
-              className="h-7 shrink-0 border-[#2a3080] bg-[#1a2060] px-3 text-[11px] text-[#4a7aff] hover:bg-[#2a3080] hover:text-[#7ab4ff]"
+              className="shrink-0"
             >
               Buscar
             </Button>
           </div>
-          <p className="text-[9px] text-[#4a5080] mt-1">
+          <p className="text-xs text-muted-foreground mt-1.5">
             Mostrando issues de:{' '}
-            <strong className="text-[#4a7aff]">{selectedUsername || 'nenhum usuário'}</strong>
+            <strong className="text-foreground">{selectedUsername || 'nenhum usuario'}</strong>
           </p>
         </div>
 
         {data?.repo.description && (
-          <p className="mb-2 line-clamp-2 text-[11px] leading-snug text-[#4a5080]">{data.repo.description}</p>
+          <p className="mb-1 line-clamp-2 text-sm leading-snug text-muted-foreground">{data.repo.description}</p>
         )}
         {lastFetch && (
-          <p className="mb-2 text-[9px] text-[#2a3050]">
+          <p className="text-xs text-muted-foreground opacity-60">
             Atualizado {relativeTime(lastFetch.toISOString())}
           </p>
         )}
@@ -238,21 +317,21 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="flex min-h-0 flex-1 flex-col">
           <TabsList
             variant="line"
-            className="grid h-auto w-full grid-cols-3 gap-1 border-b border-[#1c2040] bg-transparent p-2 sm:grid-cols-6"
+            className="grid h-auto w-full grid-cols-3 gap-1 border-b border-border bg-transparent p-2 sm:grid-cols-6"
           >
             {([
-              ['overview', '📊', 'Visão Geral'],
-              ['backlog',  `📋 ${data?.backlog.length ?? ''}`, 'Backlog'],
-              ['sprint',   `🏃 ${data?.sprint.length ?? ''}`, 'Sprint'],
-              ['test',     `🧪 ${data?.test.length ?? ''}`, 'Em Teste'],
-              ['pulls',    `🔀 ${data?.pulls.length ?? ''}`, 'Pull Requests'],
-              ['commits',  '📌', 'Commits'],
-            ] as [Tab, string, string][]).map(([id, label, title]) => (
+              ['overview', <BarChart3 key="overview" className="size-4" />, 'Visao Geral'],
+              ['backlog',  <span key="backlog" className="flex items-center gap-1"><Layers className="size-3.5" />{data?.backlog.length ?? ''}</span>, 'Backlog'],
+              ['sprint',   <span key="sprint" className="flex items-center gap-1"><Bug className="size-3.5" />{data?.sprint.length ?? ''}</span>, 'Sprint'],
+              ['test',     <span key="test" className="flex items-center gap-1"><FlaskConical className="size-3.5" />{data?.test.length ?? ''}</span>, 'Em Teste'],
+              ['pulls',    <span key="pulls" className="flex items-center gap-1"><GitPullRequest className="size-3.5" />{data?.pulls.length ?? ''}</span>, 'Pull Requests'],
+              ['commits',  <GitCommit key="commits" className="size-4" />, 'Commits'],
+            ] as [Tab, React.ReactNode, string][]).map(([id, label, title]) => (
               <TabsTrigger
                 key={id}
                 value={id}
                 title={title}
-                className="h-7 min-w-0 px-1 text-[10px] text-[#5e6385] data-active:border-[#4a7aff] data-active:bg-[#12173a] data-active:text-white"
+                className="h-8 min-w-0 px-1.5 text-xs text-muted-foreground data-active:border-primary data-active:bg-accent data-active:text-accent-foreground"
               >
                 {label}
               </TabsTrigger>
@@ -261,15 +340,17 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
 
           {/* ── Body ── */}
           <ScrollArea className="min-h-0 flex-1">
-            <div className="p-3 sm:p-3.5">
+            <div className="p-4">
 
               {loading && (
-                <EmptyState emoji="⏳" text="Carregando dados do repositório..." />
+                <EmptyState icon={<RefreshCw className="size-6 animate-spin text-muted-foreground" />} text="Carregando dados do repositorio..." />
               )}
 
               {!loading && error && (
-                <div className="text-center py-8 text-[11px] text-red-400">
-                  <div className="text-2xl mb-2">❌</div>
+                <div className="text-center py-8 text-sm text-destructive">
+                  <div className="text-2xl mb-2">
+                    <X className="size-6 mx-auto" />
+                  </div>
                   {error}
                 </div>
               )}
@@ -278,53 +359,61 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
                 <>
                   {/* ── Overview ── */}
                   <TabsContent value="overview">
-                    <p className="text-[10px] text-[#3a4080] uppercase tracking-wider mb-2 mt-1">Repositório</p>
-                    <div className="mb-3 grid grid-cols-3 gap-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 mt-1">Repositorio</p>
+                    <div className="mb-4 grid grid-cols-3 gap-2">
                       {[
-                        { val: `⭐ ${data.repo.stars}`, label: 'Stars', color: '#4a7aff' },
-                        { val: `🍴 ${data.repo.forks}`, label: 'Forks', color: '#4a7aff' },
-                        { val: String(data.repo.openIssues), label: 'Issues', color: data.repo.openIssues > 0 ? '#f97316' : '#4ade80' },
+                        { val: data.repo.stars, label: 'Stars' },
+                        { val: data.repo.forks, label: 'Forks' },
+                        { val: data.repo.openIssues, label: 'Issues', warn: data.repo.openIssues > 0 },
                       ].map(s => (
-                        <Card key={s.label} className="flex-1 bg-[#0e1228] border-[#1c2040] rounded-lg p-2 text-center gap-0">
-                          <span className="text-xl font-bold block" style={{ color: s.color }}>{s.val}</span>
-                          <span className="text-[9px] text-[#4a5080] uppercase tracking-wide">{s.label}</span>
+                        <Card key={s.label} size="sm" className="flex-1 rounded-lg p-3 text-center gap-0">
+                          <span className={`text-2xl font-bold block ${s.warn ? 'text-destructive' : 'text-card-foreground'}`}>
+                            {s.val}
+                          </span>
+                          <span className="text-xs text-muted-foreground uppercase tracking-wide">{s.label}</span>
                         </Card>
                       ))}
                     </div>
 
-                    <p className="text-[10px] text-[#3a4080] uppercase tracking-wider mb-2">Issues do Projeto</p>
-                    <div className="mb-3 grid grid-cols-3 gap-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Issues do Projeto</p>
+                    <div className="mb-4 grid grid-cols-3 gap-2">
                       {[
-                        { val: `🏃 ${data.sprint.length}`, label: 'Sprint', color: '#10b981' },
-                        { val: `📋 ${data.backlog.length}`, label: 'Backlog', color: '#fbbf24' },
-                        { val: `🧪 ${data.test.length}`, label: 'Test', color: '#8b5cf6' },
+                        { val: data.sprint.length, label: 'Sprint', icon: <Bug key="bug" className="size-4 inline" /> },
+                        { val: data.backlog.length, label: 'Backlog', icon: <Layers key="layers" className="size-4 inline" /> },
+                        { val: data.test.length, label: 'Test', icon: <FlaskConical key="flask" className="size-4 inline" /> },
                       ].map(s => (
-                        <Card key={s.label} className="flex-1 bg-[#0e1228] border-[#1c2040] rounded-lg p-2 text-center gap-0">
-                          <span className="text-lg font-bold block" style={{ color: s.color }}>{s.val}</span>
-                          <span className="text-[9px] text-[#4a5080] uppercase tracking-wide">{s.label}</span>
+                        <Card key={s.label} size="sm" className="flex-1 rounded-lg p-3 text-center gap-0">
+                          <span className="text-xl font-bold block text-card-foreground">
+                            {s.icon} {s.val}
+                          </span>
+                          <span className="text-xs text-muted-foreground uppercase tracking-wide">{s.label}</span>
                         </Card>
                       ))}
                     </div>
 
-                    <Card className="bg-[#0e1228] border-[#1c2040] rounded-lg px-3 py-2.5 mb-3 gap-0">
-                      <div className="flex justify-between items-center text-[11px] mb-1.5">
-                        <span className="text-[#4a5080]">Branch padrão</span>
-                        <Badge className="bg-[#0e2a0e] text-[#4ade80] border-transparent text-[10px]">
-                          🌿 {data.repo.defaultBranch}
+                    <Card size="sm" className="rounded-lg px-4 py-3 mb-4 gap-0">
+                      <div className="flex justify-between items-center text-sm mb-2">
+                        <span className="text-muted-foreground">Branch padrao</span>
+                        <Badge variant="secondary" className="gap-1">
+                          <GitBranch className="size-3" />
+                          {data.repo.defaultBranch}
                         </Badge>
                       </div>
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className="text-[#4a5080]">Últ. atualização</span>
-                        <span className="text-[#d0d8ff]">{relativeTime(data.repo.updatedAt)}</span>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Ult. atualizacao</span>
+                        <span className="text-foreground">{relativeTime(data.repo.updatedAt)}</span>
                       </div>
                     </Card>
 
-                    <p className="text-[10px] text-[#3a4080] uppercase tracking-wider mb-2">Últimos commits</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Ultimos commits</p>
                     {data.commits.slice(0, 5).map(c => (
                       <ItemCard key={c.sha} onClick={() => openUrl(c.url)}>
-                        <p className="text-xs text-[#d0d8ff] mb-1 leading-snug font-medium">{c.message}</p>
-                        <div className="flex flex-wrap gap-2 text-[10px] text-[#4a5080] items-center">
-                          <Badge className="bg-[#0e1a30] text-[#7ab4ff] border-transparent text-[9px] px-1.5 h-4">{c.sha}</Badge>
+                        <p className="text-sm text-card-foreground leading-snug font-medium">{c.message}</p>
+                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
+                          <Badge variant="secondary" className="gap-1">
+                            <GitCommit className="size-3" />
+                            {c.sha}
+                          </Badge>
                           <span>{c.author}</span>
                           <span>{relativeTime(c.date)}</span>
                         </div>
@@ -333,16 +422,19 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
 
                     {data.pulls.length > 0 && (
                       <>
-                        <p className="text-[10px] text-[#3a4080] uppercase tracking-wider mb-2 mt-3">PRs abertos</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 mt-4">PRs abertos</p>
                         {data.pulls.slice(0, 3).map(p => (
                           <ItemCard key={p.number} onClick={() => openUrl(p.url)}>
-                            <p className="text-xs text-[#d0d8ff] mb-1 leading-snug font-medium">
-                              {p.draft && <Badge className="bg-[#1e1e1e] text-[#888] border-transparent text-[9px] px-1.5 h-4 mr-1">Draft</Badge>}
+                            <p className="text-sm text-card-foreground leading-snug font-medium">
+                              {p.draft && <Badge variant="outline" className="mr-1.5">Draft</Badge>}
                               #{p.number} {p.title}
                             </p>
-                            <div className="flex flex-wrap gap-2 text-[10px] text-[#4a5080] items-center">
+                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
                               <span>{p.author}</span>
-                              <Badge className="bg-[#0e2a1e] text-[#4ade80] border-transparent text-[9px] px-1.5 h-4">← {p.branch}</Badge>
+                              <Badge variant="secondary" className="gap-1">
+                                <GitBranch className="size-3" />
+                                {p.branch}
+                              </Badge>
                               <span>{relativeTime(p.createdAt)}</span>
                             </div>
                           </ItemCard>
@@ -354,11 +446,11 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
                   {/* ── Backlog ── */}
                   <TabsContent value="backlog">
                     {data.backlog.length === 0
-                      ? <EmptyState emoji="📋" text="Nenhuma issue no backlog" />
+                      ? <EmptyState icon={<Layers className="size-6 text-muted-foreground" />} text="Nenhuma issue no backlog" />
                       : <>
-                          <p className="text-[10px] text-[#3a4080] uppercase tracking-wider mb-2 mt-1">Issues no Backlog</p>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 mt-1">Issues no Backlog</p>
                           {data.backlog.map(i => (
-                            <IssueCard key={i.number} issue={{ ...i, labels: i.labels.filter(l => l.name !== 'backlog') }} onClick={() => openUrl(i.url)} />
+                            <IssueCard key={i.number} issue={{ ...i, labels: i.labels.filter(l => l.name !== 'backlog') }} onClick={() => setSelectedIssue(i.number)} />
                           ))}
                         </>
                     }
@@ -367,11 +459,11 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
                   {/* ── Sprint ── */}
                   <TabsContent value="sprint">
                     {data.sprint.length === 0
-                      ? <EmptyState emoji="🏃" text="Nenhuma issue na sprint atual" />
+                      ? <EmptyState icon={<Bug className="size-6 text-muted-foreground" />} text="Nenhuma issue na sprint atual" />
                       : <>
-                          <p className="text-[10px] text-[#3a4080] uppercase tracking-wider mb-2 mt-1">Issues na Sprint</p>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 mt-1">Issues na Sprint</p>
                           {data.sprint.map(i => (
-                            <IssueCard key={i.number} issue={{ ...i, labels: i.labels.filter(l => l.name !== 'sprint') }} onClick={() => openUrl(i.url)} />
+                            <IssueCard key={i.number} issue={{ ...i, labels: i.labels.filter(l => l.name !== 'sprint') }} onClick={() => setSelectedIssue(i.number)} />
                           ))}
                         </>
                     }
@@ -380,11 +472,11 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
                   {/* ── Test ── */}
                   <TabsContent value="test">
                     {data.test.length === 0
-                      ? <EmptyState emoji="🧪" text="Nenhuma issue em teste" />
+                      ? <EmptyState icon={<FlaskConical className="size-6 text-muted-foreground" />} text="Nenhuma issue em teste" />
                       : <>
-                          <p className="text-[10px] text-[#3a4080] uppercase tracking-wider mb-2 mt-1">Issues em Teste</p>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 mt-1">Issues em Teste</p>
                           {data.test.map(i => (
-                            <IssueCard key={i.number} issue={i} onClick={() => openUrl(i.url)} />
+                            <IssueCard key={i.number} issue={i} onClick={() => setSelectedIssue(i.number)} />
                           ))}
                         </>
                     }
@@ -393,16 +485,19 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
                   {/* ── Pull Requests ── */}
                   <TabsContent value="pulls">
                     {data.pulls.length === 0
-                      ? <EmptyState emoji="✅" text="Nenhum PR aberto!" />
+                      ? <EmptyState icon={<GitPullRequest className="size-6 text-muted-foreground" />} text="Nenhum PR aberto!" />
                       : data.pulls.map(p => (
                           <ItemCard key={p.number} onClick={() => openUrl(p.url)}>
-                            <p className="text-xs text-[#d0d8ff] mb-1 leading-snug font-medium">
-                              {p.draft && <Badge className="bg-[#1e1e1e] text-[#888] border-transparent text-[9px] px-1.5 h-4 mr-1">Draft</Badge>}
+                            <p className="text-sm text-card-foreground leading-snug font-medium">
+                              {p.draft && <Badge variant="outline" className="mr-1.5">Draft</Badge>}
                               #{p.number} {p.title}
                             </p>
-                            <div className="flex flex-wrap gap-2 text-[10px] text-[#4a5080] items-center">
+                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
                               <span>{p.author}</span>
-                              <Badge className="bg-[#0e2a1e] text-[#4ade80] border-transparent text-[9px] px-1.5 h-4">← {p.branch}</Badge>
+                              <Badge variant="secondary" className="gap-1">
+                                <GitBranch className="size-3" />
+                                {p.branch}
+                              </Badge>
                               <span>{relativeTime(p.createdAt)}</span>
                             </div>
                           </ItemCard>
@@ -414,9 +509,12 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
                   <TabsContent value="commits">
                     {data.commits.map(c => (
                       <ItemCard key={c.sha} onClick={() => openUrl(c.url)}>
-                        <p className="text-xs text-[#d0d8ff] mb-1 leading-snug font-medium">{c.message}</p>
-                        <div className="flex flex-wrap gap-2 text-[10px] text-[#4a5080] items-center">
-                          <Badge className="bg-[#0e1a30] text-[#7ab4ff] border-transparent text-[9px] px-1.5 h-4">{c.sha}</Badge>
+                        <p className="text-sm text-card-foreground leading-snug font-medium">{c.message}</p>
+                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
+                          <Badge variant="secondary" className="gap-1">
+                            <GitCommit className="size-3" />
+                            {c.sha}
+                          </Badge>
                           <span>{c.author}</span>
                           <span>{relativeTime(c.date)}</span>
                         </div>
@@ -431,4 +529,3 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
     </div>
   )
 }
-

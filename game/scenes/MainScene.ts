@@ -177,7 +177,8 @@ export default class MainScene extends Phaser.Scene {
       this.socket.off() // remove listeners antigos antes de registrar novos
     } else {
       // Conexão socket otimizada com timeout reduzido
-      this.socket = io({ timeout: 3000, reconnection: true, reconnectionDelay: 500 })
+      const url = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SOCKET_URL) || 'http://localhost:3001'
+      this.socket = io(url, { timeout: 3000, reconnection: true, reconnectionDelay: 500 })
     }
 
     this.createPlayer()

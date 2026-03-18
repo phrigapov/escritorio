@@ -7,6 +7,7 @@ const ORG_NAME = 'sismacke'
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams
   const code = searchParams.get('code')
+  const headless = searchParams.get('state') === 'headless'
 
   if (!code) {
     return NextResponse.redirect(new URL('/?error=no_code', req.url))
@@ -63,6 +64,7 @@ export async function GET(req: NextRequest) {
     redirectUrl.searchParams.set('username', userData.login)
     redirectUrl.searchParams.set('name', userData.name || userData.login)
     redirectUrl.searchParams.set('avatar', userData.avatar_url || '')
+    if (headless) redirectUrl.searchParams.set('headless', 'true')
     
     return NextResponse.redirect(redirectUrl)
   } catch (error) {

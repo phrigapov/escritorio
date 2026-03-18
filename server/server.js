@@ -31,11 +31,12 @@ io.on('connection', (socket) => {
     })
 
     players[socket.id] = {
-      id: socket.id,
+      id:       socket.id,
       username: data.username,
-      x: data.x,
-      y: data.y,
-      color: data.color
+      x:        data.x,
+      y:        data.y,
+      color:    data.color,
+      headless: data.headless || false,
     }
 
     // Enviar jogadores existentes para o novo jogador (excluindo ele mesmo)

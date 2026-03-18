@@ -132,26 +132,28 @@ export class MapLoader {
       .setOrigin(0.5, 0)
       .setDepth(6)
 
-    // Paredes da sala com abertura para porta
+    // Paredes da sala com sprites de partition e abertura para porta
+    const hSprite = 'partition1' // horizontal
+    const vSprite = 'partition2' // vertical
     const sides = ['top', 'bottom', 'left', 'right'] as const
     for (const side of sides) {
       const hasDoor = room.door?.side === side
       if (side === 'top') {
         hasDoor
-          ? this.wallWithGap(absX, absY - rh / 2, rw, T, 'h', doorW, doorOff, wallColor)
-          : this.addWall(absX, absY - rh / 2, rw, T, wallColor)
+          ? this.wallWithGap(absX, absY - rh / 2, rw, T, 'h', doorW, doorOff, wallColor, hSprite)
+          : this.addWall(absX, absY - rh / 2, rw, T, wallColor, hSprite)
       } else if (side === 'bottom') {
         hasDoor
-          ? this.wallWithGap(absX, absY + rh / 2, rw, T, 'h', doorW, doorOff, wallColor)
-          : this.addWall(absX, absY + rh / 2, rw, T, wallColor)
+          ? this.wallWithGap(absX, absY + rh / 2, rw, T, 'h', doorW, doorOff, wallColor, hSprite)
+          : this.addWall(absX, absY + rh / 2, rw, T, wallColor, hSprite)
       } else if (side === 'left') {
         hasDoor
-          ? this.wallWithGap(absX - rw / 2, absY, T, rh, 'v', doorW, doorOff, wallColor)
-          : this.addWall(absX - rw / 2, absY, T, rh, wallColor)
+          ? this.wallWithGap(absX - rw / 2, absY, T, rh, 'v', doorW, doorOff, wallColor, vSprite)
+          : this.addWall(absX - rw / 2, absY, T, rh, wallColor, vSprite)
       } else if (side === 'right') {
         hasDoor
-          ? this.wallWithGap(absX + rw / 2, absY, T, rh, 'v', doorW, doorOff, wallColor)
-          : this.addWall(absX + rw / 2, absY, T, rh, wallColor)
+          ? this.wallWithGap(absX + rw / 2, absY, T, rh, 'v', doorW, doorOff, wallColor, vSprite)
+          : this.addWall(absX + rw / 2, absY, T, rh, wallColor, vSprite)
       }
     }
 
@@ -190,29 +192,40 @@ export class MapLoader {
     gapSize: number,
     gapOffset: number,
     color: number,
+    spriteKey?: string,
   ) {
     if (dir === 'h') {
       const halfLen = totalW / 2
       const gapCx = cx + gapOffset
       const leftLen  = (gapCx - gapSize / 2) - (cx - halfLen)
       const rightLen = (cx + halfLen)         - (gapCx + gapSize / 2)
-      if (leftLen  > 0) this.addWall(cx - halfLen + leftLen / 2,  cy, leftLen,  totalH, color)
-      if (rightLen > 0) this.addWall(gapCx + gapSize / 2 + rightLen / 2, cy, rightLen, totalH, color)
+      if (leftLen  > 0) this.addWall(cx - halfLen + leftLen / 2,  cy, leftLen,  totalH, color, spriteKey)
+      if (rightLen > 0) this.addWall(gapCx + gapSize / 2 + rightLen / 2, cy, rightLen, totalH, color, spriteKey)
     } else {
       const halfLen = totalH / 2
       const gapCy = cy + gapOffset
       const topLen = (gapCy - gapSize / 2) - (cy - halfLen)
       const botLen = (cy + halfLen)         - (gapCy + gapSize / 2)
-      if (topLen > 0) this.addWall(cx, cy - halfLen + topLen / 2,  totalW, topLen, color)
-      if (botLen > 0) this.addWall(cx, gapCy + gapSize / 2 + botLen / 2, totalW, botLen, color)
+      if (topLen > 0) this.addWall(cx, cy - halfLen + topLen / 2,  totalW, topLen, color, spriteKey)
+      if (botLen > 0) this.addWall(cx, gapCy + gapSize / 2 + botLen / 2, totalW, botLen, color, spriteKey)
     }
   }
 
-  private addWall(x: number, y: number, w: number, h: number, color: number = 0x3e2723) {
-    const wall = this.scene.add.rectangle(x, y, w, h, color)
-    this.walls.add(wall)
-    const body = wall.body as Phaser.Physics.Arcade.StaticBody
-    if (body) body.updateFromGameObject()
+  private addWall(x: number, y: number, w: number, h: number, color: number = 0x3e2723, spriteKey?: string) {
+    if (spriteKey && this.scene.textures.exists(spriteKey)) {
+      // Parede visual com sprite tileado
+      const tile = this.scene.add.tileSprite(x, y, w, h, spriteKey).setDepth(3)
+      // Physics body invisível
+      const phys = this.scene.add.rectangle(x, y, w, h, 0x000000, 0)
+      this.walls.add(phys)
+      const body = phys.body as Phaser.Physics.Arcade.StaticBody
+      if (body) body.updateFromGameObject()
+    } else {
+      const wall = this.scene.add.rectangle(x, y, w, h, color)
+      this.walls.add(wall)
+      const body = wall.body as Phaser.Physics.Arcade.StaticBody
+      if (body) body.updateFromGameObject()
+    }
   }
 
   private placeObject(obj: ObjectDefinition, baseX: number, baseY: number) {

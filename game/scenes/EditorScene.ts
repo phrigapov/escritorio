@@ -91,12 +91,15 @@ export default class EditorScene extends Phaser.Scene {
   private roomDrawSi = 0
   private roomDrawStart = { wx: 0, wy: 0 }
 
-  // pan câmera — controlado no update() via activePointer.rightButtonDown()
+  // pan câmera — botão direito OU botão do meio
   private _panActive  = false
   private _panStartX  = 0
   private _panStartY  = 0
   private _panScrollX = 0
   private _panScrollY = 0
+
+  // referência do handler nativo de wheel (para cleanup)
+  private _wheelHandler: ((e: WheelEvent) => void) | null = null
 
   // hit areas reconstruídas a cada redraw
   private hitAreas: HitArea[] = []
@@ -150,6 +153,10 @@ export default class EditorScene extends Phaser.Scene {
   shutdown() {
     if (this.saveTimer) clearTimeout(this.saveTimer)
     this.game.canvas.removeEventListener('contextmenu', this._noCtxMenu)
+    if (this._wheelHandler) {
+      this.game.canvas.removeEventListener('wheel', this._wheelHandler)
+      this._wheelHandler = null
+    }
     // Restaurar viewport completo para a MainScene
     const gw = this.game.scale.width
     const gh = this.game.scale.height
@@ -159,7 +166,8 @@ export default class EditorScene extends Phaser.Scene {
   update() {
     const pointer = this.input.activePointer
     const cam     = this.cameras.main
-    if (pointer.rightButtonDown()) {
+    const panning = pointer.rightButtonDown() || pointer.middleButtonDown()
+    if (panning) {
       if (!this._panActive) {
         this._panActive  = true
         this._panStartX  = pointer.x
@@ -245,7 +253,7 @@ export default class EditorScene extends Phaser.Scene {
     // Objetos do espaço
     for (let oi = 0; oi < (space.objects?.length ?? 0); oi++) {
       const obj = space.objects![oi]
-      this.drawObject(ox + obj.x, oy + obj.y, obj.type, obj.scale ?? 1, { kind: 'space-obj', si, oi }, 1)
+      this.drawObject(ox + obj.x, oy + obj.y, obj.type, obj.scale ?? 1, obj.rotation ?? 0, { kind: 'space-obj', si, oi }, 1)
     }
 
     // Spawn
@@ -331,11 +339,11 @@ export default class EditorScene extends Phaser.Scene {
     // Objetos da sala
     for (let oi = 0; oi < (room.objects?.length ?? 0); oi++) {
       const obj = room.objects![oi]
-      this.drawObject(cx + obj.x, cy + obj.y, obj.type, obj.scale ?? 1, { kind: 'room-obj', si, ri, oi }, 2)
+      this.drawObject(cx + obj.x, cy + obj.y, obj.type, obj.scale ?? 1, obj.rotation ?? 0, { kind: 'room-obj', si, ri, oi }, 2)
     }
   }
 
-  private drawObject(wx: number, wy: number, type: string, scale: number, item: SelectedEditorItem, zOrder: number) {
+  private drawObject(wx: number, wy: number, type: string, scale: number, rotation: number, item: SelectedEditorItem, zOrder: number) {
     const info = objInfo(type)
     const w = info.w * scale
     const h = info.h * scale
@@ -343,6 +351,15 @@ export default class EditorScene extends Phaser.Scene {
     this.objLayer.lineStyle(1, 0x000000, 0.5)
     this.objLayer.fillRect(wx - w / 2, wy - h / 2, w, h)
     this.objLayer.strokeRect(wx - w / 2, wy - h / 2, w, h)
+
+    // Indicador de rotação (seta vermelha a partir do centro)
+    if (rotation) {
+      const rad = Phaser.Math.DegToRad(rotation)
+      const len = Math.min(w, h) / 2 - 2
+      this.objLayer.lineStyle(2, 0xff4444, 0.9)
+      this.objLayer.lineBetween(wx, wy, wx + Math.sin(rad) * len, wy - Math.cos(rad) * len)
+    }
+
     if (w > 22) {
       this.labels.push(this.add.text(wx, wy, info.label, {
         fontSize: '9px', color: '#fff', stroke: '#000', strokeThickness: 2,
@@ -533,9 +550,75 @@ export default class EditorScene extends Phaser.Scene {
       }
     })
 
-    this.input.on('wheel', (_p: any, _go: any, _dx: any, dy: number) => {
-      const zoom = Phaser.Math.Clamp(cam.zoom - dy * 0.0008, 0.1, 2)
-      cam.setZoom(zoom)
+    // Wheel nativo: trackpad two-finger pan + pinch-to-zoom (ctrlKey)
+    this._wheelHandler = (e: WheelEvent) => {
+      e.preventDefault()
+      if (e.ctrlKey || e.metaKey) {
+        // Pinch-to-zoom ou Ctrl+scroll
+        const zoom = Phaser.Math.Clamp(cam.zoom - e.deltaY * 0.005, 0.1, 2)
+        cam.setZoom(zoom)
+      } else {
+        // Two-finger scroll / scroll wheel → pan
+        cam.scrollX += e.deltaX / cam.zoom
+        cam.scrollY += e.deltaY / cam.zoom
+      }
+    }
+    this.game.canvas.addEventListener('wheel', this._wheelHandler, { passive: false })
+
+    // Atalhos de teclado para o item selecionado
+    this.input.keyboard!.on('keydown', (event: KeyboardEvent) => {
+      if (!this.selectedItem) return
+      const item = this.selectedItem
+
+      // R → rotacionar 15° (Shift+R → -15°)
+      if (event.key === 'r' || event.key === 'R') {
+        if (item.kind === 'room') return
+        const obj = this.getObjRef(item)
+        if (!obj) return
+        const delta = event.shiftKey ? -15 : 15
+        obj.rotation = ((obj.rotation ?? 0) + delta) % 360
+        this.redrawAll(); this.autoSave()
+        this.events.emit('item-selected', this.buildItemInfo(item))
+        return
+      }
+
+      // Delete / Backspace → deletar
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        this.removeItem(item)
+        return
+      }
+
+      // +/- → escalar
+      if (event.key === '+' || event.key === '=') {
+        if (item.kind === 'room') return
+        const obj = this.getObjRef(item)
+        if (!obj) return
+        obj.scale = Math.round(((obj.scale ?? 1) + 0.1) * 10) / 10
+        this.redrawAll(); this.autoSave()
+        this.events.emit('item-selected', this.buildItemInfo(item))
+        return
+      }
+      if (event.key === '-') {
+        if (item.kind === 'room') return
+        const obj = this.getObjRef(item)
+        if (!obj) return
+        obj.scale = Math.max(0.1, Math.round(((obj.scale ?? 1) - 0.1) * 10) / 10)
+        this.redrawAll(); this.autoSave()
+        this.events.emit('item-selected', this.buildItemInfo(item))
+        return
+      }
+
+      // Setas → mover (Shift = 10px)
+      const step = event.shiftKey ? 10 : 1
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' ||
+          event.key === 'ArrowUp'   || event.key === 'ArrowDown') {
+        event.preventDefault()
+        const dx = event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0
+        const dy = event.key === 'ArrowUp'   ? -step : event.key === 'ArrowDown'  ? step : 0
+        this.nudgeItem(item, dx, dy)
+        this.redrawAll(); this.autoSave()
+        this.events.emit('item-selected', this.buildItemInfo(item))
+      }
     })
   }
 
@@ -655,14 +738,14 @@ export default class EditorScene extends Phaser.Scene {
       const r = space?.rooms?.[item.ri], o = r?.objects?.[item.oi]
       if (!r || !o) return null
       return { kind: 'room-obj', si: item.si, ri: item.ri, oi: item.oi,
-        type: o.type, x: o.x, y: o.y, scale: o.scale ?? 1,
+        type: o.type, x: o.x, y: o.y, scale: o.scale ?? 1, rotation: o.rotation ?? 0,
         worldX: Math.round(ox + r.x + o.x), worldY: Math.round(oy + r.y + o.y) }
     }
     if (item.kind === 'space-obj') {
       const o = space?.objects?.[item.oi]
       if (!o) return null
       return { kind: 'space-obj', si: item.si, oi: item.oi,
-        type: o.type, x: o.x, y: o.y, scale: o.scale ?? 1,
+        type: o.type, x: o.x, y: o.y, scale: o.scale ?? 1, rotation: o.rotation ?? 0,
         worldX: Math.round(ox + o.x), worldY: Math.round(oy + o.y) }
     }
     return null
@@ -679,13 +762,31 @@ export default class EditorScene extends Phaser.Scene {
     } else if (info.kind === 'room-obj') {
       const o = space?.rooms?.[info.ri]?.objects?.[info.oi]
       if (!o) return
-      o.x = info.x; o.y = info.y; o.scale = info.scale
+      o.x = info.x; o.y = info.y; o.scale = info.scale; o.rotation = info.rotation ?? 0
     } else if (info.kind === 'space-obj') {
       const o = space?.objects?.[info.oi]
       if (!o) return
-      o.x = info.x; o.y = info.y; o.scale = info.scale
+      o.x = info.x; o.y = info.y; o.scale = info.scale; o.rotation = info.rotation ?? 0
     }
     this.redrawAll(); this.autoSave()
+    this.events.emit('rooms-changed')
+  }
+
+  applySpaceUpdate(si: number, data: { width?: number; height?: number; floor?: { tileSize?: number; colorA?: string; colorB?: string } }) {
+    const space = this.mapData.spaces[si]
+    if (!space) return
+    if (data.width  != null) space.width  = data.width
+    if (data.height != null) space.height = data.height
+    if (data.floor) {
+      if (!space.floor) space.floor = {}
+      if (data.floor.tileSize != null) space.floor.tileSize = data.floor.tileSize
+      if (data.floor.colorA != null) space.floor.colorA = data.floor.colorA
+      if (data.floor.colorB != null) space.floor.colorB = data.floor.colorB
+    }
+    this.computeWorldBounds()
+    this.cameras.main.setBounds(-100, -100, this.worldW + 200, this.worldH + 200)
+    this.redrawAll()
+    this.autoSave()
     this.events.emit('rooms-changed')
   }
 
@@ -708,6 +809,27 @@ export default class EditorScene extends Phaser.Scene {
     const ox = space.offset?.x ?? 0, oy = space.offset?.y ?? 0
     this.cameras.main.setZoom(0.38)
     this.cameras.main.centerOn(ox + space.width / 2, oy + space.height / 2)
+  }
+
+  private getObjRef(item: SelectedEditorItem): ObjectDefinition | null {
+    const space = this.mapData.spaces[item.si]
+    if (item.kind === 'room-obj')  return space?.rooms?.[item.ri]?.objects?.[item.oi] ?? null
+    if (item.kind === 'space-obj') return space?.objects?.[item.oi] ?? null
+    return null
+  }
+
+  private nudgeItem(item: SelectedEditorItem, dx: number, dy: number) {
+    const space = this.mapData.spaces[item.si]
+    if (item.kind === 'room') {
+      const r = space?.rooms?.[item.ri]
+      if (r) { r.x += dx; r.y += dy }
+    } else if (item.kind === 'room-obj') {
+      const o = space?.rooms?.[item.ri]?.objects?.[item.oi]
+      if (o) { o.x += dx; o.y += dy }
+    } else if (item.kind === 'space-obj') {
+      const o = space?.objects?.[item.oi]
+      if (o) { o.x += dx; o.y += dy }
+    }
   }
 
   // ── Autosave ─────────────────────────────────────────────────────────────────

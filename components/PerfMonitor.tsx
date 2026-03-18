@@ -86,7 +86,11 @@ function ProgressBar({ pct, color }: { pct: number; color: string }) {
   )
 }
 
-export default function PerfMonitor() {
+interface PerfMonitorProps {
+  visible?: boolean
+}
+
+export default function PerfMonitor({ visible = true }: PerfMonitorProps) {
   const [open, setOpen] = useState(false)
   const [perf, setPerf] = useState<PerfData>({
     fps: 0,
@@ -175,11 +179,13 @@ export default function PerfMonitor() {
   const domColor  = metricColor(perf.domNodes, THRESHOLDS.domNodes)
   const pingColor = perf.ping < 0 ? '#555' : metricColor(perf.ping, THRESHOLDS.ping)
 
+  if (!visible) return null
+
   return (
     <div
       style={{
         position: 'fixed',
-        top: 12,
+        top: 52,
         right: 12,
         zIndex: 8500,
         fontFamily: '"Courier New", monospace',

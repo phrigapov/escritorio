@@ -85,6 +85,15 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
   const [fScale, setFScale] = useState('')
   const [fFloor, setFFloor] = useState('')
   const [fWall,  setFWall]  = useState('')
+  const [fRotation, setFRotation] = useState('')
+
+  // estado de edição inline de espaços
+  const [editingSpace, setEditingSpace] = useState<number | null>(null)
+  const [spW, setSpW]       = useState('')
+  const [spH, setSpH]       = useState('')
+  const [spTile, setSpTile] = useState('')
+  const [spCA, setSpCA]     = useState('')
+  const [spCB, setSpCB]     = useState('')
 
   const scene = useCallback(
     () => sceneRef.current as import('@/game/scenes/EditorScene').default | null,
@@ -102,6 +111,7 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
     setFScale(String(info.scale ?? 1))
     setFFloor(info.floorColor ?? '')
     setFWall(info.wallColor ?? '')
+    setFRotation(String(info.rotation ?? 0))
   }, [])
 
   // ── Eventos da cena ───────────────────────────────────────────────────────
@@ -160,7 +170,7 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
       ...(inspector.kind === 'room'
         ? { width: parseInt(fW, 10) || 100, height: parseInt(fH, 10) || 100,
             floorColor: fFloor, wallColor: fWall }
-        : { scale: parseFloat(fScale) || 1 }),
+        : { scale: parseFloat(fScale) || 1, rotation: parseFloat(fRotation) || 0 }),
     }
     scene()?.applyItemUpdate(updated)
     setInspector(updated)
@@ -278,10 +288,18 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 5 }}>
-              <label style={{ fontSize: 10, color: '#778' }}>Escala</label>
-              <input style={S.numInput()} value={fScale}
-                onChange={e => setFScale(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && applyInspector()} />
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Escala</label>
+                <input style={S.numInput()} value={fScale}
+                  onChange={e => setFScale(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && applyInspector()} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Rotacao (°)</label>
+                <input style={S.numInput()} value={fRotation}
+                  onChange={e => setFRotation(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && applyInspector()} />
+              </div>
             </div>
           )}
 
@@ -320,14 +338,78 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
               display: 'flex', alignItems: 'center', gap: 6,
               background: '#0e0e26', borderRadius: 5, padding: '5px 8px', marginBottom: 4,
             }}>
-              <span style={{ flex: 1, fontWeight: 'bold', fontSize: 12, color: '#aabbff' }}>
-                {space.name}
-              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 'bold', fontSize: 12, color: '#aabbff' }}>
+                  {space.name}
+                </div>
+                <div style={{ fontSize: 10, color: '#556' }}>
+                  {space.width}x{space.height}px
+                </div>
+              </div>
+              <button onClick={() => {
+                if (editingSpace === si) { setEditingSpace(null); return }
+                setEditingSpace(si)
+                setSpW(String(space.width))
+                setSpH(String(space.height))
+                setSpTile(String(space.floor?.tileSize ?? 100))
+                setSpCA(space.floor?.colorA ?? '#e8e8e8')
+                setSpCB(space.floor?.colorB ?? '#f5f5f5')
+              }} style={{
+                background: editingSpace === si ? '#5c4a1a' : '#1a2a5a',
+                border: `1px solid ${editingSpace === si ? '#c49a2a' : '#3a5aba'}`,
+                color: editingSpace === si ? '#ffd' : '#aabbff',
+                borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 10,
+              }}>{editingSpace === si ? '✕ Fechar' : '⚙ Editar'}</button>
               <button onClick={() => scene()?.focusSpace(si)} style={{
                 background: '#1a2a5a', border: '1px solid #3a5aba', color: '#aabbff',
                 borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: 10,
               }}>📍 Ir</button>
             </div>
+
+            {/* Edição inline do espaço */}
+            {editingSpace === si && (
+              <div style={{
+                background: '#0a0a1e', border: '1px solid #333366', borderRadius: 5,
+                padding: '8px 10px', marginBottom: 6, marginLeft: 4,
+              }}>
+                <div style={{ fontSize: 10, color: '#5566aa', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
+                  Dimensoes do Espaco
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Largura (px)</label>
+                    <input style={{ ...S.numInput(), width: '100%' }} value={spW} onChange={e => setSpW(e.target.value)} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Altura (px)</label>
+                    <input style={{ ...S.numInput(), width: '100%' }} value={spH} onChange={e => setSpH(e.target.value)} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Tam. Tile</label>
+                    <input style={{ ...S.numInput(), width: '100%' }} value={spTile} onChange={e => setSpTile(e.target.value)} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Piso A</label>
+                    <input type="color" value={spCA} onChange={e => setSpCA(e.target.value)}
+                      style={{ width: '100%', height: 24, border: 'none', borderRadius: 3, cursor: 'pointer', background: 'none' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Piso B</label>
+                    <input type="color" value={spCB} onChange={e => setSpCB(e.target.value)}
+                      style={{ width: '100%', height: 24, border: 'none', borderRadius: 3, cursor: 'pointer', background: 'none' }} />
+                  </div>
+                </div>
+                <button onClick={() => {
+                  scene()?.applySpaceUpdate(si, {
+                    width:  parseInt(spW, 10) || space.width,
+                    height: parseInt(spH, 10) || space.height,
+                    floor: { tileSize: parseInt(spTile, 10) || 100, colorA: spCA, colorB: spCB },
+                  })
+                }} style={S.applyBtn()}>✓ Aplicar</button>
+              </div>
+            )}
             {(space.rooms ?? []).map((room, ri) => (
               <div key={room.id} style={{
                 background: '#0c0c20', borderRadius: 4, padding: '4px 8px',
@@ -365,7 +447,10 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
         <span style={{ fontFamily: 'monospace', color: '#667' }}>
           {cursorPos.wx}px, {cursorPos.wy}px
         </span>
-        <span>🖱 Dir: pan &nbsp; Scroll: zoom</span>
+        <span style={{ textAlign: 'right', lineHeight: 1.4 }}>
+          Dir/Mid: pan · Scroll: pan<br/>
+          Ctrl+Scroll: zoom · R: rot
+        </span>
       </div>
 
       {savedMsg && (
