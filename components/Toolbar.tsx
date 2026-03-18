@@ -18,6 +18,9 @@ interface ToolbarProps {
   chatOpen?: boolean
   onToggleChat?: () => void
 
+  claudeOpen?: boolean
+  onToggleClaude?: () => void
+
   githubOpen?: boolean
   onToggleGithub?: () => void
 
@@ -35,6 +38,8 @@ export default function Toolbar({
   onSwitchMode,
   chatOpen = false,
   onToggleChat,
+  claudeOpen = false,
+  onToggleClaude,
   githubOpen = false,
   onToggleGithub,
   editorOpen = false,
@@ -61,7 +66,17 @@ export default function Toolbar({
             size="xs"
             onClick={onToggleChat}
           >
-            Chat (C)
+            Chat (1)
+          </Button>
+        )}
+
+        {onToggleClaude && (
+          <Button
+            variant={claudeOpen ? 'secondary' : 'ghost'}
+            size="xs"
+            onClick={onToggleClaude}
+          >
+            IA Paulo (2)
           </Button>
         )}
 
@@ -71,7 +86,7 @@ export default function Toolbar({
             size="xs"
             onClick={onToggleGithub}
           >
-            GitHub (G)
+            GitHub (3)
           </Button>
         )}
 
@@ -81,7 +96,7 @@ export default function Toolbar({
             size="xs"
             onClick={editorOpen ? onCloseEditor : onOpenEditor}
           >
-            {editorOpen ? 'Fechar Editor' : 'Editor (E)'}
+            {editorOpen ? 'Fechar Editor' : 'Editor (4)'}
           </Button>
         )}
 

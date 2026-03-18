@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import SidePanel from './SidePanel'
 
 interface User {
   username: string
@@ -20,11 +21,12 @@ interface SettingsPanelProps {
 }
 
 const SHORTCUTS = [
-  { key: 'C', desc: 'Abrir/fechar Chat' },
-  { key: 'G', desc: 'Abrir/fechar painel GitHub' },
-  { key: 'E', desc: 'Abrir/fechar Editor de Mapa' },
-  { key: 'P', desc: 'Abrir/fechar Monitor de Desempenho' },
-  { key: 'Esc', desc: 'Fechar menu de Configuracoes' },
+  { key: '1', desc: 'Abrir/fechar Chat' },
+  { key: '2', desc: 'Abrir/fechar IA do Paulo' },
+  { key: '3', desc: 'Abrir/fechar painel GitHub' },
+  { key: '4', desc: 'Abrir/fechar Editor de Mapa' },
+  { key: '5', desc: 'Abrir/fechar Monitor de Desempenho' },
+  { key: 'Esc', desc: 'Abrir/fechar Configuracoes' },
   { key: 'W A S D', desc: 'Movimentar personagem' },
 ]
 
@@ -44,7 +46,7 @@ export default function SettingsPanel({ user, onClose, onLogout }: SettingsPanel
   const [confirmLogout, setConfirmLogout] = useState(false)
 
   return (
-    <div className="flex w-[340px] shrink-0 flex-col border-l border-border bg-background">
+    <SidePanel defaultWidth={340}>
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         <span className="text-sm font-bold text-foreground">Configuracoes</span>
@@ -53,7 +55,7 @@ export default function SettingsPanel({ user, onClose, onLogout }: SettingsPanel
         </Button>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="p-4 space-y-5">
 
           {/* Perfil */}
@@ -190,6 +192,6 @@ export default function SettingsPanel({ user, onClose, onLogout }: SettingsPanel
 
         </div>
       </ScrollArea>
-    </div>
+    </SidePanel>
   )
 }

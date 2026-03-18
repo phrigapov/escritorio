@@ -4,7 +4,7 @@ const TOKEN = process.env.GITHUB_TOKEN
 const OWNER = process.env.GITHUB_OWNER
 const REPO  = process.env.GITHUB_REPO
 const ORG   = process.env.GITHUB_ORG || 'sismacke'
-const PROJECT_NUMBER = process.env.GITHUB_PROJECT_NUMBER || '1' // Número do projeto mackensina
+const PROJECT_NUMBER = process.env.GITHUB_PROJECT_NUMBER || '7'
 
 const BASE  = 'https://api.github.com'
 
@@ -44,10 +44,10 @@ interface IssueCacheEntry {
 const issueCache = new Map<string, IssueCacheEntry>()
 const CACHE_TTL = 2 * 60 * 1000 // 2 minutos
 
-// Busca issues abertas do usuário diretamente via GraphQL search (muito mais rápido que
-// iterar todas as issues do projeto — o GitHub filtra server-side por assignee)
-async function getOpenIssuesForUser(owner: string, repo: string, username: string, projectNumber: number) {
-  const cacheKey = `${owner}/${repo}:${username}`
+// Busca issues do usuário na org inteira (search API, rápido) e traz o status do projeto
+// junto na mesma query. O GitHub filtra por assignee server-side.
+async function getProjectIssuesForUser(org: string, projectNumber: number, username: string) {
+  const cacheKey = `project:${org}/${projectNumber}:${username}`
   const cached = issueCache.get(cacheKey)
 
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -55,19 +55,16 @@ async function getOpenIssuesForUser(owner: string, repo: string, username: strin
     return cached.issues
   }
 
-  console.log(`[SEARCH] Buscando issues abertas de: ${username}`)
+  console.log(`[SEARCH] Buscando issues de ${username} na org ${org}`)
   const allIssues: any[] = []
   let cursor: string | null = null
   let hasNextPage = true
 
   while (hasNextPage) {
     const query = `
-      query($searchQuery: String!, $cursor: String) {
-        search(query: $searchQuery, type: ISSUE, first: 100, after: $cursor) {
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
+      query($q: String!, $cursor: String) {
+        search(query: $q, type: ISSUE, first: 100, after: $cursor) {
+          pageInfo { hasNextPage endCursor }
           nodes {
             ... on Issue {
               number
@@ -75,19 +72,18 @@ async function getOpenIssuesForUser(owner: string, repo: string, username: strin
               state
               url
               createdAt
+              repository { nameWithOwner }
               author { login }
-              assignees(first: 10) { nodes { login } }
-              labels(first: 20) { nodes { name color } }
-              projectItems(first: 10, includeArchived: false) {
+              assignees(first: 5) { nodes { login } }
+              labels(first: 10) { nodes { name color } }
+              projectItems(first: 5, includeArchived: false) {
                 nodes {
                   project { number }
-                  fieldValues(first: 20) {
+                  fieldValues(first: 8) {
                     nodes {
                       ... on ProjectV2ItemFieldSingleSelectValue {
                         name
-                        field {
-                          ... on ProjectV2SingleSelectField { name }
-                        }
+                        field { ... on ProjectV2SingleSelectField { name } }
                       }
                     }
                   }
@@ -100,21 +96,35 @@ async function getOpenIssuesForUser(owner: string, repo: string, username: strin
     `
 
     const data = await ghGraphQL(query, {
-      searchQuery: `is:issue is:open assignee:${username} repo:${owner}/${repo}`,
+      q: `is:issue is:open assignee:${username} org:${org}`,
       cursor,
     })
 
     const search = data.search
     if (!search?.nodes) break
-
     allIssues.push(...search.nodes.filter((n: any) => n?.number !== undefined))
     hasNextPage = search.pageInfo.hasNextPage
     cursor = search.pageInfo.endCursor
   }
 
-  issueCache.set(cacheKey, { issues: allIssues, timestamp: Date.now() })
-  console.log(`[SEARCH] ${username}: ${allIssues.length} issues abertas encontradas`)
-  return allIssues
+  // Filtrar só issues que estão no projeto
+  const issues = allIssues
+    .filter((issue: any) =>
+      issue.projectItems?.nodes?.some((p: any) => p.project?.number === projectNumber)
+    )
+    .map((issue: any) => {
+      const projectItem = issue.projectItems.nodes.find(
+        (p: any) => p.project?.number === projectNumber
+      )
+      const statusField = projectItem?.fieldValues?.nodes?.find(
+        (f: any) => f.field?.name?.toLowerCase() === 'status'
+      )
+      return { ...issue, projectStatus: statusField?.name || '' }
+    })
+
+  issueCache.set(cacheKey, { issues, timestamp: Date.now() })
+  console.log(`[SEARCH] ${allIssues.length} issues na org, ${issues.length} no projeto #${projectNumber}`)
+  return issues
 }
 
 export async function GET(req: NextRequest) {
@@ -130,10 +140,9 @@ export async function GET(req: NextRequest) {
   const username = searchParams.get('username') || ''
 
   try {
-    // Buscar dados básicos do repositório
-    const [repo, pulls, commits] = await Promise.all([
+    // Buscar dados básicos do repositório + PRs da org onde o usuário está envolvido
+    const [repo, commits] = await Promise.all([
       ghFetch(`/repos/${OWNER}/${REPO}`),
-      ghFetch(`/repos/${OWNER}/${REPO}/pulls?state=open&per_page=10`),
       ghFetch(`/repos/${OWNER}/${REPO}/commits?per_page=10`),
     ])
 
@@ -149,19 +158,11 @@ export async function GET(req: NextRequest) {
         throw new Error('Username obrigatório')
       }
 
-      const rawIssues = await getOpenIssuesForUser(OWNER!, REPO!, username, parseInt(PROJECT_NUMBER))
+      const rawIssues = await getProjectIssuesForUser(ORG!, parseInt(PROJECT_NUMBER), username)
       console.log(`[INFO] Processando ${rawIssues.length} issues de ${username}`)
 
       rawIssues.forEach((issue: any) => {
-        // Localizar o item do projeto correto pelo número do projeto
-        const projectItem = issue.projectItems?.nodes?.find(
-          (p: any) => p.project?.number === parseInt(PROJECT_NUMBER)
-        ) ?? issue.projectItems?.nodes?.[0]
-
-        const statusField = projectItem?.fieldValues?.nodes?.find(
-          (f: any) => f.field?.name?.toLowerCase() === 'status'
-        )
-        const status = statusField?.name?.toLowerCase() || ''
+        const status = (issue.projectStatus || '').toLowerCase()
 
         const normalized = {
           number: issue.number,
@@ -175,6 +176,7 @@ export async function GET(req: NextRequest) {
           assignees: (issue.assignees?.nodes || []).map((a: any) => a.login),
           createdAt: issue.createdAt,
           url: issue.url,
+          repo: issue.repository?.nameWithOwner || '',
           status,
         }
 
@@ -195,6 +197,38 @@ export async function GET(req: NextRequest) {
       console.error('Erro ao buscar issues:', projectError)
     }
 
+    // Buscar PRs abertos da org onde o usuário está envolvido (assignee, author ou review-requested)
+    let pulls: any[] = []
+    try {
+      if (username) {
+        const prQuery = `
+          query($q: String!) {
+            search(query: $q, type: ISSUE, first: 20) {
+              nodes {
+                ... on PullRequest {
+                  number
+                  title
+                  state
+                  isDraft
+                  url
+                  createdAt
+                  author { login }
+                  headRefName
+                  repository { nameWithOwner }
+                }
+              }
+            }
+          }
+        `
+        const prData = await ghGraphQL(prQuery, {
+          q: `is:pr is:open org:${ORG} involves:${username}`,
+        })
+        pulls = (prData.search?.nodes || []).filter((n: any) => n?.number !== undefined)
+      }
+    } catch (prError) {
+      console.error('Erro ao buscar PRs:', prError)
+    }
+
     return NextResponse.json({
       repo: {
         name: repo.name,
@@ -211,15 +245,16 @@ export async function GET(req: NextRequest) {
       backlog: backlogIssues,
       sprint: sprintIssues,
       test: testIssues,
-      pulls: (pulls as any[]).map((p: any) => ({
+      pulls: pulls.map((p: any) => ({
         number: p.number,
         title: p.title,
         state: p.state,
-        draft: p.draft,
-        author: p.user?.login,
-        branch: p.head?.ref,
-        createdAt: p.created_at,
-        url: p.html_url,
+        draft: p.isDraft || false,
+        author: p.author?.login || 'unknown',
+        branch: p.headRefName || '',
+        createdAt: p.createdAt,
+        url: p.url,
+        repo: p.repository?.nameWithOwner || '',
       })),
       commits: (commits as any[]).map((c: any) => ({
         sha: c.sha?.slice(0, 7),

@@ -9,6 +9,7 @@ import SettingsPanel from './SettingsPanel'
 
 const EditorOverlay = dynamic(() => import('./EditorOverlay'), { ssr: false })
 const ChatPanel     = dynamic(() => import('./ChatPanel'),     { ssr: false })
+const ClaudePanel   = dynamic(() => import('./ClaudePanel'),   { ssr: false })
 
 interface User {
   username: string
@@ -31,10 +32,10 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
   const [editorOpen, setEditorOpen] = useState(false)
   const [githubOpen, setGithubOpen] = useState(false)
   const [chatOpen, setChatOpen]     = useState(false)
+  const [claudeOpen, setClaudeOpen] = useState(false)
   const [perfOpen, setPerfOpen]     = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [gameSocket, setGameSocket] = useState<any>(null)
-  const [chatMessages, setChatMessages] = useState<any[]>([])
 
   const displayName = user.name || user.username
 
@@ -143,46 +144,39 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
     }
   }, [user, displayName])
 
-  // ── Acumular mensagens de chat (sempre ativo, mesmo com painel fechado) ────
-  useEffect(() => {
-    if (!gameSocket) return
-    const onMessage = (msg: any) => {
-      setChatMessages(prev => [...prev.slice(-299), msg])
-    }
-    const onHistory = (history: any[]) => {
-      setChatMessages(history)
-    }
-    gameSocket.on('chat-message', onMessage)
-    gameSocket.on('chat-history', onHistory)
-    // Request history explicitly (the initial chat-history from player-joined
-    // may have arrived before this listener was registered)
-    gameSocket.emit('request-chat-history')
-    return () => {
-      gameSocket.off('chat-message', onMessage)
-      gameSocket.off('chat-history', onHistory)
-    }
-  }, [gameSocket])
-
   // ── Sincronizar estado do painel com a cena do jogo ────────────────────────
   useEffect(() => {
     if (gameRef.current) {
       const mainScene = gameRef.current.scene.getScene('MainScene')
       if (mainScene) {
-        (mainScene as any).isPanelOpen = githubOpen || editorOpen || chatOpen || settingsOpen
+        (mainScene as any).isPanelOpen = githubOpen || editorOpen || chatOpen || claudeOpen || settingsOpen
       }
     }
-  }, [githubOpen, editorOpen, chatOpen, settingsOpen])
+  }, [githubOpen, editorOpen, chatOpen, claudeOpen, settingsOpen])
 
-  // ── Atalhos de teclado ────────────────────────────────────────────────────
+  // ── Desabilitar captura global do Phaser quando painéis estão abertos ────
+  useEffect(() => {
+    const main = gameRef.current?.scene?.getScene('MainScene') as any
+    if (!main?.input?.keyboard) return
+    const anyPanelOpen = githubOpen || editorOpen || chatOpen || claudeOpen || settingsOpen
+    if (anyPanelOpen) {
+      main.input.keyboard.disableGlobalCapture()
+    } else {
+      main.input.keyboard.enableGlobalCapture()
+    }
+  }, [githubOpen, editorOpen, chatOpen, claudeOpen, settingsOpen])
+
+  // ── Atalhos de teclado (teclas numéricas para não conflitar com WASD) ────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'e' || e.key === 'E') {
+      if (e.key === '1') setChatOpen(o => !o)
+      if (e.key === '2') setClaudeOpen(o => !o)
+      if (e.key === '3') setGithubOpen(o => !o)
+      if (e.key === '4') {
         editorOpen ? closeEditor() : openEditor()
       }
-      if (e.key === 'g' || e.key === 'G') setGithubOpen(o => !o)
-      if (e.key === 'c' || e.key === 'C') setChatOpen(o => !o)
-      if (e.key === 'p' || e.key === 'P') setPerfOpen(o => !o)
+      if (e.key === '5') setPerfOpen(o => !o)
       if (e.key === 'Escape') setSettingsOpen(o => !o)
     }
     window.addEventListener('keydown', onKey)
@@ -209,6 +203,8 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
           onSwitchMode={onSwitchMode}
           chatOpen={chatOpen}
           onToggleChat={() => setChatOpen(o => !o)}
+          claudeOpen={claudeOpen}
+          onToggleClaude={() => setClaudeOpen(o => !o)}
           githubOpen={githubOpen}
           onToggleGithub={() => setGithubOpen(o => !o)}
           editorOpen={editorOpen}
@@ -223,7 +219,7 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
       <div className="flex min-h-0 flex-1 overflow-hidden">
 
         {/* Game canvas */}
-        <div className="relative min-w-0 flex-1">
+        <div className="relative min-w-0 flex-1 overflow-hidden">
           {isLoading && (
             <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-background text-foreground text-xl">
               Carregando escritorio...
@@ -242,9 +238,13 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
           <ChatPanel
             displayName={displayName}
             socket={gameSocket}
-            messages={chatMessages}
             onClose={() => setChatOpen(false)}
           />
+        )}
+
+        {/* Painel do Claude AI */}
+        {!isLoading && claudeOpen && (
+          <ClaudePanel onClose={() => setClaudeOpen(false)} />
         )}
 
         {/* Painel do GitHub (inline, nao fixed) */}

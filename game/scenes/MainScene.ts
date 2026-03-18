@@ -177,7 +177,7 @@ export default class MainScene extends Phaser.Scene {
       this.socket.off() // remove listeners antigos antes de registrar novos
     } else {
       // Conexão socket otimizada com timeout reduzido
-      const url = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SOCKET_URL) || 'http://localhost:3001'
+      const url = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SOCKET_URL) || 'http://localhost:3000'
       this.socket = io(url, { timeout: 3000, reconnection: true, reconnectionDelay: 500 })
     }
 
@@ -457,7 +457,10 @@ export default class MainScene extends Phaser.Scene {
   private closeChatInput() {
     if (!this.chatInputElement) return
     this.isTyping = false
-    this.input.keyboard!.enableGlobalCapture()
+    // Só reabilita captura global se nenhum painel React estiver aberto
+    if (!this.isPanelOpen) {
+      this.input.keyboard!.enableGlobalCapture()
+    }
     this.chatInputElement.style.display = 'none'
     this.chatInputElement.blur()
   }
@@ -478,6 +481,7 @@ export default class MainScene extends Phaser.Scene {
       username: this.username,
       text,
       timestamp: Date.now(),
+      room: 'geral',
     })
 
     this.closeChatInput()

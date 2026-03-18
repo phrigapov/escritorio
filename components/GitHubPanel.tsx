@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { RefreshCw, X, GitBranch, GitCommit, GitPullRequest, Bug, Layers, FlaskConical, BarChart3, GripVertical } from 'lucide-react'
+import { RefreshCw, X, GitBranch, GitCommit, GitPullRequest, Bug, Layers, FlaskConical, BarChart3 } from 'lucide-react'
 import IssueDetailView from './IssueDetailView'
+import SidePanel from './SidePanel'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface GHRepo {
@@ -30,6 +31,7 @@ interface GHIssue {
   assignees: string[]
   createdAt: string
   url: string
+  repo?: string
 }
 interface GHPull {
   number: number
@@ -40,6 +42,7 @@ interface GHPull {
   branch: string
   createdAt: string
   url: string
+  repo?: string
 }
 interface GHCommit {
   sha: string
@@ -59,10 +62,6 @@ interface GHData {
 }
 
 type Tab = 'overview' | 'backlog' | 'sprint' | 'test' | 'pulls' | 'commits'
-
-const DEFAULT_WIDTH = 420
-const MIN_WIDTH = 320
-const MAX_WIDTH = 900
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function relativeTime(iso: string): string {
@@ -110,6 +109,7 @@ function IssueCard({ issue, onClick }: { issue: GHIssue; onClick: () => void }) 
         #{issue.number} {issue.title}
       </p>
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
+        {issue.repo && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{issue.repo.split('/')[1]}</Badge>}
         <span>por {issue.author}</span>
         {issue.assignees.length > 0 && <span>→ {issue.assignees.join(', ')}</span>}
         <span>{relativeTime(issue.createdAt)}</span>
@@ -147,35 +147,6 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
   // ── Issue detail state ──────────────────────────────────────────────────────
   const [selectedIssue, setSelectedIssue] = useState<number | null>(null)
 
-  // ── Resizable panel state ───────────────────────────────────────────────────
-  const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH)
-  const isResizing = useRef(false)
-  const startX = useRef(0)
-  const startWidth = useRef(DEFAULT_WIDTH)
-
-  const onResizeStart = useCallback((e: React.PointerEvent) => {
-    isResizing.current = true
-    startX.current = e.clientX
-    startWidth.current = panelWidth
-    e.currentTarget.setPointerCapture(e.pointerId)
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-  }, [panelWidth])
-
-  const onResizeMove = useCallback((e: React.PointerEvent) => {
-    if (!isResizing.current) return
-    const delta = startX.current - e.clientX
-    const maxW = Math.min(MAX_WIDTH, window.innerWidth * 0.85)
-    const newWidth = Math.max(MIN_WIDTH, Math.min(maxW, startWidth.current + delta))
-    setPanelWidth(newWidth)
-  }, [])
-
-  const onResizeEnd = useCallback(() => {
-    isResizing.current = false
-    document.body.style.cursor = ''
-    document.body.style.userSelect = ''
-  }, [])
-
   // ── Data fetching ───────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -208,46 +179,17 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
   // ── Se uma issue esta selecionada, mostrar detalhe ────────────────────────
   if (selectedIssue !== null) {
     return (
-      <div
-        className="dark relative flex shrink-0 flex-col overflow-hidden border-l border-border bg-background text-sm text-foreground"
-        style={{ width: panelWidth }}
-        onKeyDown={(e) => e.stopPropagation()}
-        onKeyUp={(e) => e.stopPropagation()}
-      >
-        {/* Drag handle */}
-        <div
-          className="absolute inset-y-0 left-0 w-1.5 z-10 cursor-col-resize hover:bg-accent active:bg-accent transition-colors flex items-center"
-          onPointerDown={onResizeStart}
-          onPointerMove={onResizeMove}
-          onPointerUp={onResizeEnd}
-          onPointerCancel={onResizeEnd}
-        >
-          <GripVertical className="size-3 text-muted-foreground opacity-0 hover:opacity-100 transition-opacity" />
-        </div>
-
+      <SidePanel defaultWidth={420} className="text-sm">
         <IssueDetailView
           issueNumber={selectedIssue}
           onBack={() => setSelectedIssue(null)}
         />
-      </div>
+      </SidePanel>
     )
   }
 
   return (
-    <div
-      className="dark fixed inset-y-0 right-0 z-[1300] flex flex-col overflow-hidden border-l border-border bg-background text-sm text-foreground"
-      style={{ width: Math.min(panelWidth, window.innerWidth) }}
-      onKeyDown={(e) => e.stopPropagation()}
-      onKeyUp={(e) => e.stopPropagation()}
-    >
-      {/* Drag handle */}
-      <div
-        className="absolute inset-y-0 left-0 w-1.5 z-10 cursor-col-resize hover:bg-accent active:bg-accent transition-colors"
-        onPointerDown={onResizeStart}
-        onPointerMove={onResizeMove}
-        onPointerUp={onResizeEnd}
-        onPointerCancel={onResizeEnd}
-      />
+    <SidePanel defaultWidth={420} className="text-sm">
 
       {/* Header */}
       <div className="shrink-0 border-b border-border px-4 pt-4 pb-3">
@@ -424,12 +366,13 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
                       <>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 mt-4">PRs abertos</p>
                         {data.pulls.slice(0, 3).map(p => (
-                          <ItemCard key={p.number} onClick={() => openUrl(p.url)}>
+                          <ItemCard key={`${p.repo}-${p.number}`} onClick={() => openUrl(p.url)}>
                             <p className="text-sm text-card-foreground leading-snug font-medium">
                               {p.draft && <Badge variant="outline" className="mr-1.5">Draft</Badge>}
                               #{p.number} {p.title}
                             </p>
                             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
+                              {p.repo && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{p.repo.split('/')[1]}</Badge>}
                               <span>{p.author}</span>
                               <Badge variant="secondary" className="gap-1">
                                 <GitBranch className="size-3" />
@@ -487,12 +430,13 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
                     {data.pulls.length === 0
                       ? <EmptyState icon={<GitPullRequest className="size-6 text-muted-foreground" />} text="Nenhum PR aberto!" />
                       : data.pulls.map(p => (
-                          <ItemCard key={p.number} onClick={() => openUrl(p.url)}>
+                          <ItemCard key={`${p.repo}-${p.number}`} onClick={() => openUrl(p.url)}>
                             <p className="text-sm text-card-foreground leading-snug font-medium">
                               {p.draft && <Badge variant="outline" className="mr-1.5">Draft</Badge>}
                               #{p.number} {p.title}
                             </p>
                             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
+                              {p.repo && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{p.repo.split('/')[1]}</Badge>}
                               <span>{p.author}</span>
                               <Badge variant="secondary" className="gap-1">
                                 <GitBranch className="size-3" />
@@ -526,6 +470,6 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
             </div>
           </ScrollArea>
       </Tabs>
-    </div>
+    </SidePanel>
   )
 }
