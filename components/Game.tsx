@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import Toolbar from './Toolbar'
 import PerfMonitor from './PerfMonitor'
 import GitHubPanel from './GitHubPanel'
 import SettingsPanel from './SettingsPanel'
@@ -34,6 +33,8 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
   const [chatOpen, setChatOpen]     = useState(false)
   const [perfOpen, setPerfOpen]     = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [gameSocket, setGameSocket] = useState<any>(null)
+  const [chatMessages, setChatMessages] = useState<any[]>([])
 
   const displayName = user.name || user.username
 
@@ -59,6 +60,14 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
     const main = game.scene.getScene('MainScene')
     main?.scene.restart()
     setEditorOpen(false)
+    // Re-extract socket after scene restart
+    game.events.on('step', function reExtractSocket() {
+      const m = game.scene?.getScene('MainScene') as any
+      if (m?.socket) {
+        setGameSocket(m.socket)
+        game.events.off('step', reExtractSocket)
+      }
+    })
   }, [])
 
   // ── Inicializar Phaser ─────────────────────────────────────────────────────
@@ -98,6 +107,15 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
         gameRef.current = new Phaser.Game(config)
         gameRef.current.registry.set('username', displayName)
 
+        // Wait for MainScene to be ready, then grab its socket
+        gameRef.current.events.on('step', function extractSocket() {
+          const main = gameRef.current?.scene?.getScene('MainScene') as any
+          if (main?.socket) {
+            setGameSocket(main.socket)
+            gameRef.current.events.off('step', extractSocket)
+          }
+        })
+
         setIsLoading(false)
 
         const handleResize = () => {
@@ -124,6 +142,26 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
       }
     }
   }, [user, displayName])
+
+  // ── Acumular mensagens de chat (sempre ativo, mesmo com painel fechado) ────
+  useEffect(() => {
+    if (!gameSocket) return
+    const onMessage = (msg: any) => {
+      setChatMessages(prev => [...prev.slice(-299), msg])
+    }
+    const onHistory = (history: any[]) => {
+      setChatMessages(history)
+    }
+    gameSocket.on('chat-message', onMessage)
+    gameSocket.on('chat-history', onHistory)
+    // Request history explicitly (the initial chat-history from player-joined
+    // may have arrived before this listener was registered)
+    gameSocket.emit('request-chat-history')
+    return () => {
+      gameSocket.off('chat-message', onMessage)
+      gameSocket.off('chat-history', onHistory)
+    }
+  }, [gameSocket])
 
   // ── Sincronizar estado do painel com a cena do jogo ────────────────────────
   useEffect(() => {
@@ -165,58 +203,20 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
 
       {/* ── Top toolbar ── */}
       {!isLoading && (
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-4 py-2 z-[1500] bg-background">
-          {/* Indicador */}
-          <Badge variant="outline" className="gap-1.5">
-            <span className="text-sm font-bold">{displayName}</span>
-            {user.loginType === 'github' && (
-              <span className="text-[10px] text-muted-foreground">via GitHub</span>
-            )}
-          </Badge>
-
-          {/* Botoes de painel (direita) */}
-          <div className="ml-auto flex items-center gap-1.5">
-            <Button
-              variant={chatOpen ? 'secondary' : 'ghost'}
-              size="xs"
-              onClick={() => setChatOpen(o => !o)}
-            >
-              Chat (C)
-            </Button>
-
-            <Button
-              variant={githubOpen ? 'secondary' : 'ghost'}
-              size="xs"
-              onClick={() => setGithubOpen(o => !o)}
-            >
-              GitHub (G)
-            </Button>
-
-            <Button
-              variant={editorOpen ? 'destructive' : 'ghost'}
-              size="xs"
-              onClick={editorOpen ? closeEditor : openEditor}
-            >
-              {editorOpen ? 'Fechar Editor' : 'Editor (E)'}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={onSwitchMode}
-            >
-              Modo Dev
-            </Button>
-
-            <Button
-              variant={settingsOpen ? 'secondary' : 'ghost'}
-              size="xs"
-              onClick={() => setSettingsOpen(o => !o)}
-            >
-              Config (Esc)
-            </Button>
-          </div>
-        </div>
+        <Toolbar
+          user={user}
+          mode="game"
+          onSwitchMode={onSwitchMode}
+          chatOpen={chatOpen}
+          onToggleChat={() => setChatOpen(o => !o)}
+          githubOpen={githubOpen}
+          onToggleGithub={() => setGithubOpen(o => !o)}
+          editorOpen={editorOpen}
+          onOpenEditor={openEditor}
+          onCloseEditor={closeEditor}
+          settingsOpen={settingsOpen}
+          onToggleSettings={() => setSettingsOpen(o => !o)}
+        />
       )}
 
       {/* ── Main area: game + panels ── */}
@@ -241,6 +241,8 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
         {!isLoading && chatOpen && (
           <ChatPanel
             displayName={displayName}
+            socket={gameSocket}
+            messages={chatMessages}
             onClose={() => setChatOpen(false)}
           />
         )}

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 const Game         = dynamic(() => import('@/components/Game'),        { ssr: false })
 const HeadlessMode = dynamic(() => import('@/components/HeadlessMode'), { ssr: false })
@@ -13,13 +14,14 @@ interface User {
   username: string
   name?: string
   avatar?: string
-  loginType: 'github'
+  loginType: 'simple' | 'github'
 }
 
 export default function Home() {
   const [user, setUser]       = useState<User | null>(null)
   const [headless, setHeadless] = useState(false)
   const [error, setError]     = useState('')
+  const [simpleName, setSimpleName] = useState('')
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -96,8 +98,38 @@ export default function Home() {
               </div>
             )}
 
+            {/* Login rapido com nome */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Seu nome..."
+                value={simpleName}
+                onChange={e => setSimpleName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && simpleName.trim()) {
+                    setUser({ username: simpleName.trim(), name: simpleName.trim(), loginType: 'simple' })
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button
+                size="lg"
+                disabled={!simpleName.trim()}
+                onClick={() => setUser({ username: simpleName.trim(), name: simpleName.trim(), loginType: 'simple' })}
+              >
+                Entrar
+              </Button>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">ou</span>
+              </div>
+            </div>
+
             <Button
               size="lg"
+              variant="outline"
               onClick={() => handleGitHubLogin()}
               className="w-full gap-2"
             >
@@ -119,7 +151,7 @@ export default function Home() {
 
           <CardFooter className="justify-center">
             <p className="text-xs text-muted-foreground">
-              Login obrigatorio via GitHub
+              Entre com um nome ou via GitHub
             </p>
           </CardFooter>
         </Card>

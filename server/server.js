@@ -17,16 +17,29 @@ const io = socketIo(server, {
 // Armazenar jogadores conectados
 const players = {}
 
+// Historico de chat (general channel) — ultimas 200 mensagens em memória
+const chatHistory = []
+const MAX_CHAT_HISTORY = 200
+
 io.on('connection', (socket) => {
   console.log(`Novo jogador conectado: ${socket.id}`)
 
+  // Pedido explicito de historico de chat (para clientes que conectam tarde)
+  socket.on('request-chat-history', () => {
+    socket.emit('chat-history', chatHistory)
+  })
+
   // Quando um jogador entra
   socket.on('player-joined', (data) => {
-    // Remove sessão antiga com mesmo username (refresh/reconexão rápida)
+    // Remove sessão antiga DESCONECTADA com mesmo username (refresh/reconexão)
+    // Sessões ainda conectadas são mantidas (ex: múltiplas abas)
     Object.keys(players).forEach(id => {
       if (id !== socket.id && players[id].username === data.username) {
-        socket.broadcast.emit('player-disconnected', id)
-        delete players[id]
+        const existingSocket = io.sockets.sockets.get(id)
+        if (!existingSocket || !existingSocket.connected) {
+          socket.broadcast.emit('player-disconnected', id)
+          delete players[id]
+        }
       }
     })
 
@@ -53,6 +66,11 @@ io.on('connection', (socket) => {
       id: socket.id,
       playerData: players[socket.id]
     })
+
+    // Enviar historico de chat para o novo jogador
+    if (chatHistory.length > 0) {
+      socket.emit('chat-history', chatHistory)
+    }
 
     console.log(`${data.username} entrou no escritório`)
   })
@@ -86,6 +104,12 @@ io.on('connection', (socket) => {
     }
 
     if (!payload.text.trim()) return
+
+    // Salvar no historico
+    chatHistory.push(payload)
+    if (chatHistory.length > MAX_CHAT_HISTORY) {
+      chatHistory.shift()
+    }
 
     console.log(`Chat - ${payload.username}: ${payload.text}`)
     // Transmitir mensagem para todos, incluindo o remetente

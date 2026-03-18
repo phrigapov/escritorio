@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { io, Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -16,30 +16,29 @@ interface ChatMessage {
 
 interface Props {
   displayName: string
+  socket: Socket | null
+  messages: ChatMessage[]
   onClose: () => void
 }
 
-export default function ChatPanel({ displayName, onClose }: Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+export default function ChatPanel({ displayName, socket, messages, onClose }: Props) {
   const [input, setInput]       = useState('')
   const [connected, setConnected] = useState(false)
-  const socketRef  = useRef<Socket | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
-    const socket = io(url, { timeout: 3000, reconnection: true, reconnectionDelay: 500 })
-    socketRef.current = socket
-
-    socket.on('connect',    () => setConnected(true))
-    socket.on('disconnect', () => setConnected(false))
-    socket.on('chat-message', (msg: ChatMessage) => {
-      setMessages(prev => [...prev.slice(-299), msg])
-    })
-
-    return () => { socket.disconnect() }
-  }, [])
+    if (!socket) return
+    const onConnect    = () => setConnected(true)
+    const onDisconnect = () => setConnected(false)
+    setConnected(socket.connected)
+    socket.on('connect',    onConnect)
+    socket.on('disconnect', onDisconnect)
+    return () => {
+      socket.off('connect',    onConnect)
+      socket.off('disconnect', onDisconnect)
+    }
+  }, [socket])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -47,11 +46,11 @@ export default function ChatPanel({ displayName, onClose }: Props) {
 
   const sendMessage = useCallback(() => {
     const text = input.trim()
-    if (!text || !socketRef.current) return
-    socketRef.current.emit('chat-message', { username: displayName, text, timestamp: Date.now() })
+    if (!text || !socket) return
+    socket.emit('chat-message', { username: displayName, text, timestamp: Date.now() })
     setInput('')
     inputRef.current?.focus()
-  }, [input, displayName])
+  }, [input, displayName, socket])
 
   const formatTime = (ts: number) =>
     new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })

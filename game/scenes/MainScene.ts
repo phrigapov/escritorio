@@ -42,7 +42,7 @@ interface ChatMessage {
 }
 
 export default class MainScene extends Phaser.Scene {
-  private socket!: Socket
+  public socket!: Socket
   private player!: Phaser.Physics.Arcade.Sprite
   private playerNameText!: Phaser.GameObjects.Text
   private otherPlayers: Map<string, Player> = new Map()
@@ -301,6 +301,8 @@ export default class MainScene extends Phaser.Scene {
 
     this.input.keyboard!.on('keydown-ENTER', (event: KeyboardEvent) => {
       if (event.repeat) return
+      // Ignore when focus is on a React/HTML input (e.g. ChatPanel)
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return
 
       if (!this.isTyping) {
         this.openChatInput()
@@ -310,7 +312,8 @@ export default class MainScene extends Phaser.Scene {
       this.submitChatMessage()
     })
 
-    this.input.keyboard!.on('keydown-ESC', () => {
+    this.input.keyboard!.on('keydown-ESC', (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return
       if (!this.isTyping) return
       this.closeChatInput()
     })
@@ -415,6 +418,7 @@ export default class MainScene extends Phaser.Scene {
     input.style.border = '2px solid #667eea'
     input.style.borderRadius = '12px'
     input.style.background = 'rgba(255, 255, 255, 0.96)'
+    input.style.color = '#000'
     input.style.fontSize = '16px'
     input.style.zIndex = '2000'
     input.style.display = 'none'
@@ -424,6 +428,9 @@ export default class MainScene extends Phaser.Scene {
     document.body.appendChild(input)
 
     input.addEventListener('keydown', (event: KeyboardEvent) => {
+      // Stop propagation so Phaser's window listener doesn't see input keystrokes
+      event.stopPropagation()
+
       if (event.key === 'Enter') {
         event.preventDefault()
         this.submitChatMessage()
@@ -463,6 +470,9 @@ export default class MainScene extends Phaser.Scene {
       this.closeChatInput()
       return
     }
+
+    // Show bubble immediately (local echo)
+    this.showOwnChatBubble(text)
 
     this.socket.emit('chat-message', {
       username: this.username,

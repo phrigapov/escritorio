@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import Toolbar from './Toolbar'
 import GitHubPanel from './GitHubPanel'
+import SettingsPanel from './SettingsPanel'
 
 type PlayerStatus = 'online' | 'busy' | 'away'
 
@@ -51,7 +53,8 @@ export default function HeadlessMode({ user, onSwitchMode, onLogout }: { user: U
   const [input, setInput]         = useState('')
   const [players, setPlayers]     = useState<OnlinePlayer[]>([])
   const [status, setStatus]       = useState<PlayerStatus>('online')
-  const [githubOpen, setGithubOpen] = useState(true)
+  const [githubOpen, setGithubOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [connected, setConnected] = useState(false)
   const socketRef    = useRef<Socket | null>(null)
   const chatEndRef   = useRef<HTMLDivElement>(null)
@@ -116,6 +119,15 @@ export default function HeadlessMode({ user, onSwitchMode, onLogout }: { user: U
       setMessages(prev => [...prev.slice(-299), msg])
     })
 
+    socket.on('chat-history', (history: ChatMessage[]) => {
+      setMessages(history)
+    })
+
+    // Also request explicitly in case we missed the initial one
+    socket.on('connect', () => {
+      socket.emit('request-chat-history')
+    })
+
     return () => {
       socket.disconnect()
     }
@@ -146,6 +158,7 @@ export default function HeadlessMode({ user, onSwitchMode, onLogout }: { user: U
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (e.key === 'g' || e.key === 'G') setGithubOpen(o => !o)
+      if (e.key === 'Escape') setSettingsOpen(o => !o)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -160,60 +173,15 @@ export default function HeadlessMode({ user, onSwitchMode, onLogout }: { user: U
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
 
-        {/* Top bar */}
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-4 py-2.5">
-          {/* Glass room indicator */}
-          <Badge variant="outline" className="gap-1.5">
-            <span>Sala de Vidro</span>
-            <span className="text-[10px] text-muted-foreground">modo dev</span>
-          </Badge>
-
-          {/* Name + status dot */}
-          <div className="flex items-center gap-2">
-            <div className={`h-2 w-2 rounded-full ${STATUS_VARIANTS[status]}`} />
-            <span className="text-sm font-bold">{displayName}</span>
-            {user.loginType === 'github' && (
-              <span className="text-[10px] text-muted-foreground">via GitHub</span>
-            )}
-          </div>
-
-          {/* Connection indicator */}
-          <Badge variant={connected ? 'outline' : 'destructive'} className="text-[10px] px-1.5 py-0 h-4">
-            {connected ? 'Conectado' : 'Reconectando...'}
-          </Badge>
-
-          {/* Status buttons */}
-          <div className="ml-auto flex gap-1.5">
-            {(['online', 'busy', 'away'] as PlayerStatus[]).map(s => (
-              <Button
-                key={s}
-                variant={status === s ? 'secondary' : 'ghost'}
-                size="xs"
-                onClick={() => changeStatus(s)}
-              >
-                {STATUS_LABELS[s]}
-              </Button>
-            ))}
-          </div>
-
-          <Button variant="outline" size="xs" onClick={onSwitchMode}>
-            Modo Normal
-          </Button>
-
-          <Button
-            variant={githubOpen ? 'secondary' : 'ghost'}
-            size="xs"
-            onClick={() => setGithubOpen(o => !o)}
-          >
-            GitHub (G)
-          </Button>
-
-          {onLogout && (
-            <Button variant="ghost" size="xs" onClick={onLogout}>
-              Sair
-            </Button>
-          )}
-        </div>
+        <Toolbar
+          user={user}
+          mode="headless"
+          onSwitchMode={onSwitchMode}
+          githubOpen={githubOpen}
+          onToggleGithub={() => setGithubOpen(o => !o)}
+          settingsOpen={settingsOpen}
+          onToggleSettings={() => setSettingsOpen(o => !o)}
+        />
 
         {/* Main area: players sidebar + chat */}
         <div className="flex min-h-0 flex-1">
@@ -320,6 +288,15 @@ export default function HeadlessMode({ user, onSwitchMode, onLogout }: { user: U
         <GitHubPanel
           onClose={() => setGithubOpen(false)}
           defaultUsername={user.username}
+        />
+      )}
+
+      {/* Settings Panel */}
+      {settingsOpen && (
+        <SettingsPanel
+          user={user}
+          onClose={() => setSettingsOpen(false)}
+          onLogout={onLogout || (() => {})}
         />
       )}
     </div>
