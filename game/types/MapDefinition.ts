@@ -2,6 +2,7 @@ export interface FloorConfig {
   tileSize?: number
   colorA?: string  // hex, ex: "#e8e8e8"
   colorB?: string
+  texture?: string // chave de textura tileable para o piso do espaço
 }
 
 export interface DoorConfig {
@@ -28,8 +29,10 @@ export interface RoomDefinition {
   y: number        // centro Y relativo à origem do espaço
   width: number
   height: number
-  floorColor?: string  // hex
-  wallColor?: string   // hex
+  floorColor?: string   // hex fallback
+  wallColor?: string    // hex fallback
+  floorTexture?: string // chave de textura tileable para o piso
+  wallTexture?: string  // chave de textura tileable para as paredes
   door?: DoorConfig
   objects?: ObjectDefinition[]
 }

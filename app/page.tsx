@@ -1,29 +1,42 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
+import { loadUser, saveUser, loadPrefs, type User } from '@/lib/prefs'
+
 const Game         = dynamic(() => import('@/components/Game'),        { ssr: false })
 const HeadlessMode = dynamic(() => import('@/components/HeadlessMode'), { ssr: false })
 
-interface User {
-  username: string
-  name?: string
-  avatar?: string
-  loginType: 'simple' | 'github'
-}
-
 export default function Home() {
-  const [user, setUser]       = useState<User | null>(null)
-  const [headless, setHeadless] = useState(false)
-  const [error, setError]     = useState('')
+  const [user, setUser]             = useState<User | null>(null)
+  const [headless, setHeadless]     = useState(false)
+  const [error, setError]           = useState('')
   const [simpleName, setSimpleName] = useState('')
+  const [simpleEnabled, setSimpleEnabled] = useState(false)
+  const [ready, setReady]           = useState(false) // evita flash de login
   const searchParams = useSearchParams()
 
+  // Contagem de espaços consecutivos para habilitar login por nome
+  const [spaceCount, setSpaceCount] = useState(0)
+  const [lastSpaceTime, setLastSpaceTime] = useState(0)
+
+  // Ao montar, tenta restaurar sessão do localStorage
+  useEffect(() => {
+    const stored = loadUser()
+    if (stored) {
+      setUser(stored)
+      const prefs = loadPrefs()
+      setHeadless(prefs.initialMode === 'dev')
+    }
+    setReady(true)
+  }, [])
+
+  // Processa callback do OAuth via URL params
   useEffect(() => {
     const loginType  = searchParams.get('login')
     const errorParam = searchParams.get('error')
@@ -48,22 +61,72 @@ export default function Home() {
       const ghHeadless = searchParams.get('headless') === 'true'
 
       if (ghUsername) {
-        setUser({
+        const u: User = {
           username:  ghUsername,
           name:      ghName   || undefined,
           avatar:    ghAvatar || undefined,
           loginType: 'github',
-        })
+        }
+        setUser(u)
+        saveUser(u)
         setHeadless(ghHeadless)
         window.history.replaceState({}, '', '/')
       }
     }
   }, [searchParams])
 
+  // Listener de teclado para triple-space na tela de login
+  useEffect(() => {
+    if (user) return // já logado, não precisa
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key !== ' ') {
+        setSpaceCount(0)
+        return
+      }
+      const now = Date.now()
+      if (now - lastSpaceTime > 800) {
+        // Reset se demorou demais entre espaços
+        setSpaceCount(1)
+      } else {
+        setSpaceCount(prev => prev + 1)
+      }
+      setLastSpaceTime(now)
+    }
+
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [user, lastSpaceTime])
+
+  // Ativa login simples quando 3 espaços consecutivos
+  useEffect(() => {
+    if (spaceCount >= 3 && !simpleEnabled) {
+      setSimpleEnabled(true)
+      setSpaceCount(0)
+    }
+  }, [spaceCount, simpleEnabled])
+
   const handleGitHubLogin = (headless = false) => {
     setError('')
     window.location.href = headless ? '/api/auth/github?headless=true' : '/api/auth/github'
   }
+
+  const handleSimpleLogin = useCallback(() => {
+    if (!simpleName.trim()) return
+    const u: User = { username: simpleName.trim(), name: simpleName.trim(), loginType: 'simple' }
+    setUser(u)
+    saveUser(u)
+  }, [simpleName])
+
+  const handleLogout = () => {
+    setUser(null)
+    saveUser(null)
+    setHeadless(false)
+    setSimpleEnabled(false)
+  }
+
+  // Evita flash de login enquanto verifica localStorage
+  if (!ready) return null
 
   if (!user) {
     return (
@@ -98,35 +161,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* Login rapido com nome */}
-            <div className="flex gap-2">
-              <Input
-                placeholder="Seu nome..."
-                value={simpleName}
-                onChange={e => setSimpleName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && simpleName.trim()) {
-                    setUser({ username: simpleName.trim(), name: simpleName.trim(), loginType: 'simple' })
-                  }
-                }}
-                className="flex-1"
-              />
-              <Button
-                size="lg"
-                disabled={!simpleName.trim()}
-                onClick={() => setUser({ username: simpleName.trim(), name: simpleName.trim(), loginType: 'simple' })}
-              >
-                Entrar
-              </Button>
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">ou</span>
-              </div>
-            </div>
-
+            {/* Login GitHub — método principal */}
             <Button
               size="lg"
               variant="outline"
@@ -139,29 +174,47 @@ export default function Home() {
               Entrar com GitHub
             </Button>
 
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={() => handleGitHubLogin(true)}
-              className="w-full"
-            >
-              Modo Dev (Sala de Vidro)
-            </Button>
+            {/* Login simples — escondido, habilitado com triple-space */}
+            {simpleEnabled && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">ou entre com nome</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Seu nome..."
+                    value={simpleName}
+                    onChange={e => setSimpleName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleSimpleLogin()
+                    }}
+                    className="flex-1"
+                    autoFocus
+                  />
+                  <Button
+                    size="lg"
+                    disabled={!simpleName.trim()}
+                    onClick={handleSimpleLogin}
+                  >
+                    Entrar
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
 
           <CardFooter className="justify-center">
             <p className="text-xs text-muted-foreground">
-              Entre com um nome ou via GitHub
+              Autentique-se via GitHub para continuar
             </p>
           </CardFooter>
         </Card>
       </div>
     )
-  }
-
-  const handleLogout = () => {
-    setUser(null)
-    setHeadless(false)
   }
 
   if (headless) return <HeadlessMode user={user} onSwitchMode={() => setHeadless(false)} onLogout={handleLogout} />

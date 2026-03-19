@@ -1,18 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import SidePanel from './SidePanel'
-
-interface User {
-  username: string
-  name?: string
-  avatar?: string
-  loginType: 'simple' | 'github'
-}
+import { loadPrefs, savePrefs, type User } from '@/lib/prefs'
 
 interface SettingsPanelProps {
   user: User
@@ -28,14 +22,15 @@ const SHORTCUTS = [
   { key: '5', desc: 'Abrir/fechar Monitor de Desempenho' },
   { key: 'Esc', desc: 'Abrir/fechar Configuracoes' },
   { key: 'W A S D', desc: 'Movimentar personagem' },
+  { key: 'E', desc: 'Interagir (portas, etc.)' },
 ]
 
 const EDITOR_SHORTCUTS = [
   { key: 'R', desc: 'Rotacionar objeto selecionado (+15°)' },
   { key: 'Shift+R', desc: 'Rotacionar objeto (-15°)' },
   { key: '+ / -', desc: 'Aumentar/diminuir escala do objeto' },
-  { key: 'Setas', desc: 'Mover item (1px)' },
-  { key: 'Shift+Setas', desc: 'Mover item (10px)' },
+  { key: 'Setas', desc: 'Mover item (1 grid)' },
+  { key: 'Shift+Setas', desc: 'Mover item (4 grids)' },
   { key: 'Delete', desc: 'Deletar item selecionado' },
   { key: 'Scroll', desc: 'Pan (arrastar mapa)' },
   { key: 'Ctrl+Scroll', desc: 'Zoom' },
@@ -44,6 +39,19 @@ const EDITOR_SHORTCUTS = [
 
 export default function SettingsPanel({ user, onClose, onLogout }: SettingsPanelProps) {
   const [confirmLogout, setConfirmLogout] = useState(false)
+  const [initialMode, setInitialMode] = useState<'normal' | 'dev'>('normal')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    setInitialMode(loadPrefs().initialMode)
+  }, [])
+
+  function handleModeChange(mode: 'normal' | 'dev') {
+    setInitialMode(mode)
+    savePrefs({ initialMode: mode })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1500)
+  }
 
   return (
     <SidePanel defaultWidth={340}>
@@ -82,6 +90,43 @@ export default function SettingsPanel({ user, onClose, onLogout }: SettingsPanel
               <Badge variant="outline" className="text-[10px] shrink-0">
                 {user.loginType === 'github' ? 'GitHub' : 'Local'}
               </Badge>
+            </div>
+          </section>
+
+          <Separator />
+
+          {/* Preferencias */}
+          <section>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              Preferencias
+            </h3>
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground mb-2">
+                Modo inicial ao entrar
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={initialMode === 'normal' ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => handleModeChange('normal')}
+                >
+                  Normal (Game)
+                </Button>
+                <Button
+                  variant={initialMode === 'dev' ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => handleModeChange('dev')}
+                >
+                  Dev (Headless)
+                </Button>
+              </div>
+              {saved && (
+                <div className="text-[10px] text-green-500 text-center">
+                  Salvo!
+                </div>
+              )}
             </div>
           </section>
 

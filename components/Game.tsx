@@ -58,6 +58,10 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
     game.scene.stop('EditorScene')
     editorSceneRef.current = null
     game.cache.json.remove('map')
+    // Limpa texturas de piso geradas dinamicamente (podem ter mudado no editor)
+    game.textures.getTextureKeys()
+      .filter((k: string) => k.startsWith('floor_'))
+      .forEach((k: string) => game.textures.remove(k))
     const main = game.scene.getScene('MainScene')
     main?.scene.restart()
     setEditorOpen(false)

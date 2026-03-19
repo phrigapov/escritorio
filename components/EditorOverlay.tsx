@@ -4,6 +4,42 @@ import { useEffect, useState, useCallback } from 'react'
 import type { SpaceDefinition } from '@/game/types/MapDefinition'
 import { OBJECT_CATALOG, type EditorTool } from '@/game/scenes/EditorScene'
 
+// Opções de textura disponíveis para pisos e paredes de salas
+const FLOOR_TEXTURES = [
+  { key: '',              label: 'Cor sólida (padrão)' },
+  { key: 'floor_red',    label: 'Vermelho' },
+  { key: 'floor_golden', label: 'Dourado' },
+  { key: 'floor_teal',   label: 'Teal' },
+  { key: 'floor_wood',   label: 'Madeira' },
+  { key: 'floor_dark',   label: 'Escuro' },
+  { key: 'floor_orange', label: 'Laranja' },
+  { key: 'floor_purple', label: 'Roxo' },
+  { key: 'floor_gray',   label: 'Cinza' },
+  { key: 'floor_ceramic1', label: 'Cerâmica 1' },
+  { key: 'floor_ceramic2', label: 'Cerâmica 2' },
+  { key: 'floor_mosaic',   label: 'Mosaico' },
+  { key: 'floor_herring',  label: 'Espinha Peixe' },
+  { key: 'floor_stone',    label: 'Pedra' },
+  { key: 'floor_slate',    label: 'Ardósia' },
+]
+
+const WALL_TEXTURES = [
+  { key: '',                label: 'Cor sólida (padrão)' },
+  { key: 'wall_base',      label: 'Neutro' },
+  { key: 'wall_red',       label: 'Vermelho' },
+  { key: 'wall_yellow',    label: 'Amarelo' },
+  { key: 'wall_teal',      label: 'Teal' },
+  { key: 'wall_brown',     label: 'Marrom' },
+  { key: 'wall_darkbrown', label: 'Marrom Escuro' },
+  { key: 'wall_orange',    label: 'Laranja' },
+  { key: 'wall_purple',    label: 'Roxo' },
+  { key: 'wall_gray',      label: 'Cinza' },
+  { key: 'wall_red_alt',   label: 'Vermelho Alt.' },
+  { key: 'wall_yellow_alt',label: 'Amarelo Alt.' },
+  { key: 'wall_teal_alt',  label: 'Teal Alt.' },
+  { key: 'wall_brown_alt', label: 'Marrom Alt.' },
+]
+
 interface EditorOverlayProps {
   sceneRef: React.MutableRefObject<any>
   onClose: () => void
@@ -85,7 +121,13 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
   const [fScale, setFScale] = useState('')
   const [fFloor, setFFloor] = useState('')
   const [fWall,  setFWall]  = useState('')
+  const [fFloorTex, setFFloorTex] = useState('')
+  const [fWallTex,  setFWallTex]  = useState('')
   const [fRotation, setFRotation] = useState('')
+  const [fDoorSide, setFDoorSide] = useState('')
+  const [fDoorOff, setFDoorOff]   = useState('0')
+  const [fDoorW, setFDoorW]       = useState('80')
+  const [fDoorLabel, setFDoorLabel] = useState('')
 
   // estado de edição inline de espaços
   const [editingSpace, setEditingSpace] = useState<number | null>(null)
@@ -111,7 +153,13 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
     setFScale(String(info.scale ?? 1))
     setFFloor(info.floorColor ?? '')
     setFWall(info.wallColor ?? '')
+    setFFloorTex(info.floorTexture ?? '')
+    setFWallTex(info.wallTexture ?? '')
     setFRotation(String(info.rotation ?? 0))
+    setFDoorSide(info.doorSide ?? '')
+    setFDoorOff(String(info.doorOffset ?? 0))
+    setFDoorW(String(info.doorWidth ?? 80))
+    setFDoorLabel(info.doorLabel ?? '')
   }, [])
 
   // ── Eventos da cena ───────────────────────────────────────────────────────
@@ -169,7 +217,10 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
       y:          parseInt(fY,  10) || 0,
       ...(inspector.kind === 'room'
         ? { width: parseInt(fW, 10) || 100, height: parseInt(fH, 10) || 100,
-            floorColor: fFloor, wallColor: fWall }
+            floorColor: fFloor, wallColor: fWall,
+            floorTexture: fFloorTex, wallTexture: fWallTex,
+            doorSide: fDoorSide, doorOffset: parseInt(fDoorOff, 10) || 0,
+            doorWidth: parseInt(fDoorW, 10) || 80, doorLabel: fDoorLabel }
         : { scale: parseFloat(fScale) || 1, rotation: parseFloat(fRotation) || 0 }),
     }
     scene()?.applyItemUpdate(updated)
@@ -223,16 +274,41 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
         </div>
       </div>
 
+      {/* Grid snap */}
+      <div style={{ ...S.sec(), display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 10, color: '#5566aa', textTransform: 'uppercase', letterSpacing: 1 }}>Grid</span>
+        {[8, 16, 32, 64].map(g => (
+          <button key={g} onClick={() => { scene()?.setGridSize(g) }}
+            style={{
+              ...S.btn(scene()?.getGridSize() === g),
+              padding: '3px 7px', fontSize: 11, minWidth: 30,
+            }}
+          >{g}</button>
+        ))}
+      </div>
+
       {/* Catálogo de objetos (visível apenas na ferramenta add-object) */}
       {activeTool === 'add-object' && (
-        <div style={S.sec()}>
+        <div style={{ ...S.sec(), maxHeight: '40vh', overflowY: 'auto' }}>
           <div style={S.title()}>Tipo de Objeto</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {OBJECT_CATALOG.map(o => (
-              <button key={o.type} onClick={() => selectObj(o.type)}
-                style={S.btn(activeObj === o.type)}>{o.label}</button>
-            ))}
-          </div>
+          {(() => {
+            const groups: Record<string, typeof OBJECT_CATALOG> = {}
+            OBJECT_CATALOG.forEach(o => {
+              if (!groups[o.category]) groups[o.category] = []
+              groups[o.category].push(o)
+            })
+            return Object.entries(groups).map(([cat, items]) => (
+              <div key={cat} style={{ marginBottom: 6 }}>
+                <div style={{ fontSize: 10, color: '#667eaa', marginBottom: 3, fontWeight: 'bold' }}>{cat}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {items.map(o => (
+                    <button key={o.type} onClick={() => selectObj(o.type)}
+                      style={S.btn(activeObj === o.type)}>{o.label}</button>
+                  ))}
+                </div>
+              </div>
+            ))
+          })()}
         </div>
       )}
 
@@ -314,6 +390,68 @@ export default function EditorOverlay({ sceneRef, onClose }: EditorOverlayProps)
                     style={{ width: '100%', height: 24, border: 'none', borderRadius: 3, cursor: 'pointer', background: 'none' }} />
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Texturas de piso e parede (sala) */}
+          {inspector.kind === 'room' && (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 5 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Textura Piso</label>
+                <select value={fFloorTex} onChange={e => { setFFloorTex(e.target.value); }}
+                  style={{ ...S.textInput(), fontSize: 11, padding: '3px 4px' }}>
+                  {FLOOR_TEXTURES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Textura Parede</label>
+                <select value={fWallTex} onChange={e => { setFWallTex(e.target.value); }}
+                  style={{ ...S.textInput(), fontSize: 11, padding: '3px 4px' }}>
+                  {WALL_TEXTURES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Porta (sala) */}
+          {inspector.kind === 'room' && (
+            <div style={{ marginBottom: 5, borderTop: '1px solid #1a1a38', paddingTop: 6 }}>
+              <div style={{ fontSize: 10, color: '#5566aa', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Porta</div>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Lado</label>
+                  <select value={fDoorSide} onChange={e => setFDoorSide(e.target.value)}
+                    style={{ ...S.textInput(), fontSize: 11, padding: '3px 4px' }}>
+                    <option value="">Sem porta</option>
+                    <option value="top">Cima</option>
+                    <option value="bottom">Baixo</option>
+                    <option value="left">Esquerda</option>
+                    <option value="right">Direita</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Largura</label>
+                  <input style={S.numInput()} value={fDoorW}
+                    onChange={e => setFDoorW(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && applyInspector()} />
+                </div>
+              </div>
+              {fDoorSide && (
+                <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Offset</label>
+                    <input style={S.numInput()} value={fDoorOff}
+                      onChange={e => setFDoorOff(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && applyInspector()} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: '#778', display: 'block', marginBottom: 2 }}>Label</label>
+                    <input style={S.textInput()} value={fDoorLabel}
+                      onChange={e => setFDoorLabel(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && applyInspector()} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

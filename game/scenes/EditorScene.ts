@@ -13,40 +13,254 @@ export type SelectedEditorItem =
 // ── Catálogo visual de objetos ────────────────────────────────────────────────
 
 export const OBJ_INFO: Record<string, { w: number; h: number; color: number; label: string }> = {
-  workstation:    { w: 64,  h: 70,  color: 0x2c3e50, label: 'WS'       },
-  desk:           { w: 64,  h: 48,  color: 0x8B6914, label: 'Mesa'     },
-  'desk-with-pc': { w: 80,  h: 48,  color: 0x5d4037, label: 'PC-Desk'  },
-  chair:          { w: 28,  h: 28,  color: 0x4a90d9, label: 'Cadeira'  },
-  sofa:           { w: 80,  h: 48,  color: 0x9b59b6, label: 'Sofá'     },
-  plant:          { w: 32,  h: 32,  color: 0x2ecc71, label: 'Planta'   },
-  bookshelf:      { w: 32,  h: 64,  color: 0x795548, label: 'Estante'  },
-  meetingTable:   { w: 128, h: 96,  color: 0xa0522d, label: 'Mesa Reun.' },
-  coffee:         { w: 40,  h: 28,  color: 0x607d8b, label: 'Café'     },
-  printer:        { w: 40,  h: 28,  color: 0x546e7a, label: 'Impressora' },
-  water:          { w: 24,  h: 48,  color: 0x29b6f6, label: 'Água'     },
-  cabinet:        { w: 36,  h: 64,  color: 0x6d4c41, label: 'Arquivo'  },
-  trash:          { w: 24,  h: 24,  color: 0x757575, label: 'Lixo'     },
-  sink:           { w: 40,  h: 36,  color: 0x00acc1, label: 'Pia'      },
-  partition1:     { w: 16,  h: 80,  color: 0x78909c, label: '|'        },
-  partition2:     { w: 80,  h: 16,  color: 0x78909c, label: '─'        },
+  // ── Compostos / Grandes ──
+  workstation:       { w: 64,  h: 70,  color: 0x2c3e50, label: 'WS'          },
+  meetingTable:      { w: 128, h: 96,  color: 0xa0522d, label: 'Mesa Reun.'  },
+  // ── Mesas & Bancadas ──
+  desk:              { w: 64,  h: 48,  color: 0x8B6914, label: 'Mesa'        },
+  'desk-with-pc':    { w: 80,  h: 48,  color: 0x5d4037, label: 'PC-Desk'     },
+  // ── Cadeiras ──
+  chair:             { w: 28,  h: 28,  color: 0x4a90d9, label: 'Cadeira'     },
+  exec_chair:        { w: 16,  h: 16,  color: 0x4a90d9, label: 'Exec.Ch.'    },
+  office_chair:      { w: 16,  h: 16,  color: 0x4a75c9, label: 'Off.Ch.'     },
+  sofa:              { w: 80,  h: 48,  color: 0x9b59b6, label: 'Sofá'        },
+  // ── Plantas ──
+  plant:             { w: 32,  h: 32,  color: 0x2ecc71, label: 'Planta'      },
+  tall_plant:        { w: 16,  h: 16,  color: 0x27ae60, label: 'Pl.Alta'     },
+  // ── Armários & Estantes ──
+  bookshelf:         { w: 32,  h: 64,  color: 0x795548, label: 'Estante'     },
+  cabinet:           { w: 36,  h: 64,  color: 0x6d4c41, label: 'Arquivo'     },
+  filing_cabinet:    { w: 16,  h: 16,  color: 0x6d4c41, label: 'Arq.P.'      },
+  small_cabinet:     { w: 16,  h: 16,  color: 0x8d6e63, label: 'Arm.P.'      },
+  wall_shelf:        { w: 16,  h: 16,  color: 0x795548, label: 'Pratel.'     },
+  // ── Equipamentos ──
+  coffee:            { w: 40,  h: 28,  color: 0x607d8b, label: 'Café'        },
+  coffee_cup:        { w: 16,  h: 16,  color: 0x795548, label: 'Xícara'      },
+  printer:           { w: 40,  h: 28,  color: 0x546e7a, label: 'Impressora'  },
+  water:             { w: 24,  h: 48,  color: 0x29b6f6, label: 'Água'        },
+  water_cooler:      { w: 16,  h: 16,  color: 0x29b6f6, label: 'Beb.P.'      },
+  server_rack:       { w: 16,  h: 16,  color: 0x37474f, label: 'Servidor'    },
+  // ── Computadores & Eletrônicos ──
+  laptop:            { w: 16,  h: 16,  color: 0x546e7a, label: 'Laptop'      },
+  monitor_obj:       { w: 16,  h: 16,  color: 0x2c3e50, label: 'Monitor'     },
+  keyboard_obj:      { w: 16,  h: 16,  color: 0x424242, label: 'Teclado'     },
+  mouse_obj:         { w: 16,  h: 16,  color: 0x424242, label: 'Mouse'       },
+  desk_lamp:         { w: 16,  h: 16,  color: 0xffd54f, label: 'Luminária'   },
+  // ── Itens de parede ──
+  whiteboard:        { w: 16,  h: 16,  color: 0xeeeeee, label: 'Quadro'      },
+  wall_art:          { w: 16,  h: 16,  color: 0xe91e63, label: 'Quadro A.'   },
+  wall_chart:        { w: 16,  h: 16,  color: 0x42a5f5, label: 'Gráfico'     },
+  wall_monitor:      { w: 16,  h: 16,  color: 0x263238, label: 'TV Parede'   },
+  // ── Pequenos objetos ──
+  documents:         { w: 16,  h: 16,  color: 0xfff9c4, label: 'Docs'        },
+  trash:             { w: 24,  h: 24,  color: 0x757575, label: 'Lixo'        },
+  trash_bin:         { w: 16,  h: 16,  color: 0x757575, label: 'Lixo P.'     },
+  sink:              { w: 40,  h: 36,  color: 0x00acc1, label: 'Pia'         },
+  // ── Divisórias ──
+  partition1:        { w: 16,  h: 80,  color: 0x78909c, label: '|'           },
+  partition2:        { w: 80,  h: 16,  color: 0x78909c, label: '─'           },
+  cubicle_partition: { w: 16,  h: 16,  color: 0x78909c, label: 'Divisória'   },
+  // ── NPCs / Personagens decorativos ──
+  boss:              { w: 64,  h: 64,  color: 0xe53935, label: 'Chefe'       },
+  npc_character:     { w: 16,  h: 16,  color: 0x8e24aa, label: 'NPC'         },
+  worker1:           { w: 64,  h: 64,  color: 0x1e88e5, label: 'Func.1'      },
+  worker2:           { w: 64,  h: 64,  color: 0x43a047, label: 'Func.2'      },
+  worker4:           { w: 64,  h: 64,  color: 0xfb8c00, label: 'Func.4'      },
+  // ── Interiors tileset — mobília extraída ──
+  int_fridge:        { w: 32,  h: 48,  color: 0x81c784, label: 'Geladeira'   },
+  int_fridge2:       { w: 32,  h: 48,  color: 0x64b5f6, label: 'Gelad.2'     },
+  int_fridge3:       { w: 32,  h: 48,  color: 0x4db6ac, label: 'Gelad.3'     },
+  int_stove:         { w: 32,  h: 32,  color: 0x757575, label: 'Fogão'       },
+  int_microwave:     { w: 16,  h: 16,  color: 0x90a4ae, label: 'Micro.'      },
+  int_sink_kitchen:  { w: 32,  h: 32,  color: 0xb0bec5, label: 'Pia Coz.'    },
+  int_window:        { w: 48,  h: 48,  color: 0x81d4fa, label: 'Janela'      },
+  int_bathtub:       { w: 48,  h: 32,  color: 0xe0e0e0, label: 'Banheira'    },
+  int_toilet:        { w: 16,  h: 32,  color: 0xfafafa, label: 'Vaso'        },
+  int_bath_sink:     { w: 16,  h: 32,  color: 0xeceff1, label: 'Pia Ban.'    },
+  int_bed_single:    { w: 32,  h: 48,  color: 0xef9a9a, label: 'Cama S.'     },
+  int_bed_double:    { w: 48,  h: 48,  color: 0xce93d8, label: 'Cama C.'     },
+  int_desk_wood:     { w: 48,  h: 32,  color: 0xa1887f, label: 'Mesa Mad.'   },
+  int_desk_modern:   { w: 48,  h: 32,  color: 0x90a4ae, label: 'Mesa Mod.'   },
+  int_chair_office:  { w: 16,  h: 32,  color: 0x5c6bc0, label: 'Cad.Int.'    },
+  int_bookshelf:     { w: 32,  h: 48,  color: 0x8d6e63, label: 'Estante L.'  },
+  int_shelf:         { w: 32,  h: 48,  color: 0xa1887f, label: 'Pratel.G.'   },
+  int_sofa_blue:     { w: 48,  h: 32,  color: 0x5c6bc0, label: 'Sofá Az.'    },
+  int_sofa_purple:   { w: 48,  h: 32,  color: 0xab47bc, label: 'Sofá Rx.'    },
+  int_armchair:      { w: 32,  h: 32,  color: 0x7e57c2, label: 'Poltrona'    },
+  int_tv:            { w: 32,  h: 32,  color: 0x37474f, label: 'TV'          },
+  int_pc_setup:      { w: 32,  h: 32,  color: 0x455a64, label: 'PC Setup'    },
+  int_plant_pot:     { w: 16,  h: 32,  color: 0x66bb6a, label: 'Vaso Pl.'    },
+  int_plant_big:     { w: 32,  h: 48,  color: 0x43a047, label: 'Palmeira'    },
+  int_door:          { w: 32,  h: 48,  color: 0x8d6e63, label: 'Porta'       },
+  int_door_double:   { w: 48,  h: 48,  color: 0x795548, label: 'Porta Dup.'  },
+  int_painting1:     { w: 32,  h: 32,  color: 0xef5350, label: 'Quadro 1'    },
+  int_painting2:     { w: 32,  h: 32,  color: 0x42a5f5, label: 'Quadro 2'    },
+  int_clock:         { w: 16,  h: 16,  color: 0xfdd835, label: 'Relógio'     },
+  int_rug_red:       { w: 48,  h: 32,  color: 0xc62828, label: 'Tapete Vm.'  },
+  int_rug_blue:      { w: 48,  h: 32,  color: 0x1565c0, label: 'Tapete Az.'  },
+  int_counter:       { w: 48,  h: 32,  color: 0xa1887f, label: 'Balcão'      },
+  int_reception:     { w: 64,  h: 32,  color: 0x8d6e63, label: 'Recepção'    },
+  int_vending:       { w: 32,  h: 48,  color: 0xe53935, label: 'Vending'     },
+  int_arcade:        { w: 32,  h: 48,  color: 0x1e88e5, label: 'Fliperama'   },
+  // ── Room Builder — pisos temáticos (16×16 tiles) ──
+  floor_red:         { w: 16,  h: 16,  color: 0xb16c63, label: 'Piso Verm.'  },
+  floor_golden:      { w: 16,  h: 16,  color: 0xcdab7e, label: 'Piso Dour.'  },
+  floor_teal:        { w: 16,  h: 16,  color: 0xc5c6b7, label: 'Piso Teal'   },
+  floor_wood:        { w: 16,  h: 16,  color: 0xa77c55, label: 'Piso Mad.'   },
+  floor_dark:        { w: 16,  h: 16,  color: 0x8a6659, label: 'Piso Escuro' },
+  floor_orange:      { w: 16,  h: 16,  color: 0x9c5b47, label: 'Piso Laran.' },
+  floor_purple:      { w: 16,  h: 16,  color: 0x9c9faf, label: 'Piso Roxo'   },
+  floor_gray:        { w: 16,  h: 16,  color: 0xaca99e, label: 'Piso Cinza'  },
+  floor_ceramic1:    { w: 16,  h: 16,  color: 0x975351, label: 'Piso Cer.1'  },
+  floor_ceramic2:    { w: 16,  h: 16,  color: 0x9a5754, label: 'Piso Cer.2'  },
+  floor_mosaic:      { w: 16,  h: 16,  color: 0xdad29c, label: 'Piso Mosaico'},
+  floor_herring:     { w: 16,  h: 16,  color: 0x857d7d, label: 'Esp.Peixe'   },
+  floor_stone:       { w: 16,  h: 16,  color: 0x8d8382, label: 'Piso Pedra'  },
+  floor_slate:       { w: 16,  h: 16,  color: 0x908785, label: 'Piso Ardósia'},
+  // ── Room Builder — paredes temáticas (16×16 tiles) ──
+  wall_base:         { w: 16,  h: 16,  color: 0xb0b0b9, label: 'Par.Neutro'  },
+  wall_red:          { w: 16,  h: 16,  color: 0xc59788, label: 'Par.Verm.'   },
+  wall_yellow:       { w: 16,  h: 16,  color: 0xd9cda5, label: 'Par.Amar.'   },
+  wall_teal:         { w: 16,  h: 16,  color: 0xc7d9d5, label: 'Par.Teal'    },
+  wall_brown:        { w: 16,  h: 16,  color: 0xb6977a, label: 'Par.Marrom'  },
+  wall_darkbrown:    { w: 16,  h: 16,  color: 0x9f857d, label: 'Par.M.Esc.'  },
+  wall_orange:       { w: 16,  h: 16,  color: 0xad7d6f, label: 'Par.Laran.'  },
+  wall_purple:       { w: 16,  h: 16,  color: 0xb0b2be, label: 'Par.Roxo'    },
+  wall_gray:         { w: 16,  h: 16,  color: 0xbbbab3, label: 'Par.Cinza'   },
+  wall_red_alt:      { w: 16,  h: 16,  color: 0xcf8869, label: 'Par.Vm.Alt'  },
+  wall_yellow_alt:   { w: 16,  h: 16,  color: 0xefe29c, label: 'Par.Am.Alt'  },
+  wall_teal_alt:     { w: 16,  h: 16,  color: 0xd4f2e8, label: 'Par.Tl.Alt'  },
+  wall_brown_alt:    { w: 16,  h: 16,  color: 0xb68552, label: 'Par.Mr.Alt'  },
 }
 
 const OBJ_DEFAULT = { w: 36, h: 36, color: 0x888888, label: '?' }
-function objInfo(type: string) { return OBJ_INFO[type] ?? OBJ_DEFAULT }
+function objInfo(type: string) {
+  // Suporte a spritesheet:frame — usa tamanho padrão de tile
+  if (type.includes(':')) return { w: 16, h: 16, color: 0xaaaaaa, label: `T${type.split(':')[1]}` }
+  return OBJ_INFO[type] ?? OBJ_DEFAULT
+}
 
-export const OBJECT_CATALOG: { type: string; label: string }[] = [
-  { type: 'workstation',  label: '🖥 Workstation'    },
-  { type: 'desk',         label: '📦 Mesa'           },
-  { type: 'chair',        label: '🪑 Cadeira'        },
-  { type: 'sofa',         label: '🛋 Sofá'           },
-  { type: 'plant',        label: '🌿 Planta'         },
-  { type: 'bookshelf',    label: '📚 Estante'        },
-  { type: 'meetingTable', label: '🏓 Mesa Reunião'   },
-  { type: 'coffee',       label: '☕ Café'           },
-  { type: 'printer',      label: '🖨 Impressora'     },
-  { type: 'water',        label: '💧 Bebedouro'      },
-  { type: 'cabinet',      label: '🗄 Arquivo'        },
-  { type: 'trash',        label: '🗑 Lixeira'        },
+export const OBJECT_CATALOG: { type: string; label: string; category: string }[] = [
+  // Compostos
+  { type: 'workstation',       label: '🖥 Workstation',      category: 'Compostos'    },
+  { type: 'meetingTable',      label: '🏓 Mesa Reunião',     category: 'Compostos'    },
+  // Mesas
+  { type: 'desk',              label: '📦 Mesa',             category: 'Mobília'      },
+  { type: 'desk-with-pc',      label: '🖥 Mesa c/ PC',       category: 'Mobília'      },
+  // Cadeiras
+  { type: 'chair',             label: '🪑 Cadeira',          category: 'Mobília'      },
+  { type: 'exec_chair',        label: '🪑 Cadeira Exec.',    category: 'Mobília'      },
+  { type: 'office_chair',      label: '🪑 Cadeira Office',   category: 'Mobília'      },
+  { type: 'sofa',              label: '🛋 Sofá',             category: 'Mobília'      },
+  // Armazenamento
+  { type: 'bookshelf',         label: '📚 Estante',          category: 'Mobília'      },
+  { type: 'cabinet',           label: '🗄 Arquivo',          category: 'Mobília'      },
+  { type: 'filing_cabinet',    label: '🗄 Arquivo P.',       category: 'Mobília'      },
+  { type: 'small_cabinet',     label: '🗄 Armário P.',       category: 'Mobília'      },
+  { type: 'wall_shelf',        label: '📦 Prateleira',       category: 'Mobília'      },
+  // Plantas
+  { type: 'plant',             label: '🌿 Planta',           category: 'Decoração'    },
+  { type: 'tall_plant',        label: '🌿 Planta Alta',      category: 'Decoração'    },
+  // Equipamentos
+  { type: 'coffee',            label: '☕ Cafeteira',         category: 'Equipamentos' },
+  { type: 'coffee_cup',        label: '☕ Xícara',            category: 'Equipamentos' },
+  { type: 'printer',           label: '🖨 Impressora',       category: 'Equipamentos' },
+  { type: 'water',             label: '💧 Bebedouro',        category: 'Equipamentos' },
+  { type: 'water_cooler',      label: '💧 Bebedouro P.',     category: 'Equipamentos' },
+  { type: 'server_rack',       label: '🖥 Servidor',         category: 'Equipamentos' },
+  { type: 'sink',              label: '🚰 Pia',              category: 'Equipamentos' },
+  // Eletrônicos
+  { type: 'laptop',            label: '💻 Laptop',           category: 'Eletrônicos'  },
+  { type: 'monitor_obj',       label: '🖥 Monitor',          category: 'Eletrônicos'  },
+  { type: 'keyboard_obj',      label: '⌨ Teclado',           category: 'Eletrônicos'  },
+  { type: 'mouse_obj',         label: '🖱 Mouse',            category: 'Eletrônicos'  },
+  { type: 'desk_lamp',         label: '💡 Luminária',        category: 'Eletrônicos'  },
+  // Parede
+  { type: 'whiteboard',        label: '📋 Quadro Branco',    category: 'Parede'       },
+  { type: 'wall_art',          label: '🖼 Quadro Arte',      category: 'Parede'       },
+  { type: 'wall_chart',        label: '📊 Gráfico Parede',   category: 'Parede'       },
+  { type: 'wall_monitor',      label: '📺 TV Parede',        category: 'Parede'       },
+  // Pequenos objetos
+  { type: 'documents',         label: '📄 Documentos',       category: 'Pequenos'     },
+  { type: 'trash',             label: '🗑 Lixeira',          category: 'Pequenos'     },
+  { type: 'trash_bin',         label: '🗑 Lixeira P.',       category: 'Pequenos'     },
+  // Divisórias
+  { type: 'cubicle_partition', label: '▯ Divisória',         category: 'Estrutural'   },
+  // Personagens decorativos
+  { type: 'boss',              label: '👔 Chefe',            category: 'Personagens'  },
+  { type: 'npc_character',     label: '👤 NPC',              category: 'Personagens'  },
+  { type: 'worker1',           label: '👷 Funcionário 1',    category: 'Personagens'  },
+  { type: 'worker2',           label: '👷 Funcionário 2',    category: 'Personagens'  },
+  { type: 'worker4',           label: '👷 Funcionário 4',    category: 'Personagens'  },
+  // ── Interiors Tileset — Cozinha ──
+  { type: 'int_fridge',        label: '🧊 Geladeira',        category: 'Cozinha'      },
+  { type: 'int_fridge2',       label: '🧊 Geladeira 2',      category: 'Cozinha'      },
+  { type: 'int_fridge3',       label: '🧊 Geladeira 3',      category: 'Cozinha'      },
+  { type: 'int_stove',         label: '🔥 Fogão',            category: 'Cozinha'      },
+  { type: 'int_microwave',     label: '📦 Microondas',       category: 'Cozinha'      },
+  { type: 'int_sink_kitchen',  label: '🚰 Pia Cozinha',      category: 'Cozinha'      },
+  { type: 'int_counter',       label: '🔲 Balcão',           category: 'Cozinha'      },
+  { type: 'int_vending',       label: '🥤 Vending Machine',  category: 'Cozinha'      },
+  // ── Interiors Tileset — Banheiro ──
+  { type: 'int_bathtub',       label: '🛁 Banheira',         category: 'Banheiro'     },
+  { type: 'int_toilet',        label: '🚽 Vaso Sanitário',   category: 'Banheiro'     },
+  { type: 'int_bath_sink',     label: '🚰 Pia Banheiro',     category: 'Banheiro'     },
+  // ── Interiors Tileset — Dormitório ──
+  { type: 'int_bed_single',    label: '🛏 Cama Solteiro',    category: 'Dormitório'   },
+  { type: 'int_bed_double',    label: '🛏 Cama Casal',       category: 'Dormitório'   },
+  // ── Interiors Tileset — Mobília Interior ──
+  { type: 'int_desk_wood',     label: '🪵 Mesa Madeira',     category: 'Interior'     },
+  { type: 'int_desk_modern',   label: '🔲 Mesa Moderna',     category: 'Interior'     },
+  { type: 'int_chair_office',  label: '🪑 Cadeira Int.',     category: 'Interior'     },
+  { type: 'int_bookshelf',     label: '📚 Estante Livros',   category: 'Interior'     },
+  { type: 'int_shelf',         label: '📦 Prateleira G.',    category: 'Interior'     },
+  { type: 'int_sofa_blue',     label: '🛋 Sofá Azul',        category: 'Interior'     },
+  { type: 'int_sofa_purple',   label: '🛋 Sofá Roxo',        category: 'Interior'     },
+  { type: 'int_armchair',      label: '💺 Poltrona',         category: 'Interior'     },
+  { type: 'int_tv',            label: '📺 TV',               category: 'Interior'     },
+  { type: 'int_pc_setup',      label: '🖥 PC Setup',         category: 'Interior'     },
+  { type: 'int_reception',     label: '🏢 Recepção',         category: 'Interior'     },
+  { type: 'int_arcade',        label: '🕹 Fliperama',        category: 'Interior'     },
+  // ── Interiors Tileset — Decoração ──
+  { type: 'int_plant_pot',     label: '🌱 Vaso Planta',      category: 'Dec. Interior'},
+  { type: 'int_plant_big',     label: '🌴 Palmeira',         category: 'Dec. Interior'},
+  { type: 'int_door',          label: '🚪 Porta',            category: 'Dec. Interior'},
+  { type: 'int_door_double',   label: '🚪 Porta Dupla',      category: 'Dec. Interior'},
+  { type: 'int_painting1',     label: '🖼 Quadro 1',         category: 'Dec. Interior'},
+  { type: 'int_painting2',     label: '🖼 Quadro 2',         category: 'Dec. Interior'},
+  { type: 'int_clock',         label: '🕐 Relógio',          category: 'Dec. Interior'},
+  { type: 'int_rug_red',       label: '🔴 Tapete Vermelho',  category: 'Dec. Interior'},
+  { type: 'int_rug_blue',      label: '🔵 Tapete Azul',      category: 'Dec. Interior'},
+  { type: 'int_window',        label: '🪟 Janela',           category: 'Dec. Interior'},
+  // ── Room Builder — Pisos ──
+  { type: 'floor_red',         label: '🟥 Piso Vermelho',    category: 'Pisos'        },
+  { type: 'floor_golden',      label: '🟨 Piso Dourado',     category: 'Pisos'        },
+  { type: 'floor_teal',        label: '🟩 Piso Teal',        category: 'Pisos'        },
+  { type: 'floor_wood',        label: '🟫 Piso Madeira',     category: 'Pisos'        },
+  { type: 'floor_dark',        label: '🟫 Piso Escuro',      category: 'Pisos'        },
+  { type: 'floor_orange',      label: '🟧 Piso Laranja',     category: 'Pisos'        },
+  { type: 'floor_purple',      label: '🟪 Piso Roxo',        category: 'Pisos'        },
+  { type: 'floor_gray',        label: '⬜ Piso Cinza',        category: 'Pisos'        },
+  { type: 'floor_ceramic1',    label: '🔲 Piso Cerâmica 1',  category: 'Pisos'        },
+  { type: 'floor_ceramic2',    label: '🔲 Piso Cerâmica 2',  category: 'Pisos'        },
+  { type: 'floor_mosaic',      label: '🔶 Piso Mosaico',     category: 'Pisos'        },
+  { type: 'floor_herring',     label: '🔷 Piso Esp.Peixe',   category: 'Pisos'        },
+  { type: 'floor_stone',       label: '⬛ Piso Pedra',        category: 'Pisos'        },
+  { type: 'floor_slate',       label: '⬛ Piso Ardósia',      category: 'Pisos'        },
+  // ── Room Builder — Paredes ──
+  { type: 'wall_base',         label: '⬜ Parede Neutra',     category: 'Paredes Dec.' },
+  { type: 'wall_red',          label: '🟥 Parede Vermelha',  category: 'Paredes Dec.' },
+  { type: 'wall_yellow',       label: '🟨 Parede Amarela',   category: 'Paredes Dec.' },
+  { type: 'wall_teal',         label: '🟩 Parede Teal',      category: 'Paredes Dec.' },
+  { type: 'wall_brown',        label: '🟫 Parede Marrom',    category: 'Paredes Dec.' },
+  { type: 'wall_darkbrown',    label: '🟫 Parede M.Escuro',  category: 'Paredes Dec.' },
+  { type: 'wall_orange',       label: '🟧 Parede Laranja',   category: 'Paredes Dec.' },
+  { type: 'wall_purple',       label: '🟪 Parede Roxa',      category: 'Paredes Dec.' },
+  { type: 'wall_gray',         label: '⬜ Parede Cinza',      category: 'Paredes Dec.' },
+  { type: 'wall_red_alt',      label: '🟥 Parede Vm.Alt',    category: 'Paredes Dec.' },
+  { type: 'wall_yellow_alt',   label: '🟨 Parede Am.Alt',    category: 'Paredes Dec.' },
+  { type: 'wall_teal_alt',     label: '🟩 Parede Tl.Alt',    category: 'Paredes Dec.' },
+  { type: 'wall_brown_alt',    label: '🟫 Parede Mr.Alt',    category: 'Paredes Dec.' },
 ]
 
 // ── Hit area ──────────────────────────────────────────────────────────────────
@@ -113,6 +327,9 @@ export default class EditorScene extends Phaser.Scene {
   // dimensões do mundo
   private worldW = 2000
   private worldH = 3000
+
+  // tamanho do grid (snap)
+  private gridSize = 16
 
   constructor() { super({ key: 'EditorScene' }) }
 
@@ -233,6 +450,16 @@ export default class EditorScene extends Phaser.Scene {
         this.bgLayer.fillStyle(col, 1)
         this.bgLayer.fillRect(ox + tx, oy + ty, ts, ts)
       }
+    }
+
+    // Grid do espaço
+    const gs = this.gridSize
+    this.bgLayer.lineStyle(1, 0x444466, 0.25)
+    for (let gx = 0; gx <= space.width; gx += gs) {
+      this.bgLayer.lineBetween(ox + gx, oy, ox + gx, oy + space.height)
+    }
+    for (let gy = 0; gy <= space.height; gy += gs) {
+      this.bgLayer.lineBetween(ox, oy + gy, ox + space.width, oy + gy)
     }
 
     // Borda do espaço
@@ -437,19 +664,21 @@ export default class EditorScene extends Phaser.Scene {
     const cam = this.cameras.main
 
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      const wx = p.worldX, wy = p.worldY
-      this.events.emit('cursor-moved', { wx: Math.round(wx), wy: Math.round(wy) })
+      const rawX = p.worldX, rawY = p.worldY
+      const wx = this.snap(rawX), wy = this.snap(rawY)
+      this.events.emit('cursor-moved', { wx, wy })
       this.cursorLayer.clear()
 
       if (this.isDragging && this.selectedItem) {
-        this.applyDrag(wx - this.dragOffX, wy - this.dragOffY)
+        this.applyDrag(rawX - this.dragOffX, rawY - this.dragOffY)
         return
       }
 
       if (this.isDrawingRoom) {
         const sx = this.roomDrawStart.wx, sy = this.roomDrawStart.wy
-        const x = Math.min(wx, sx), y = Math.min(wy, sy)
-        const w = Math.abs(wx - sx), h = Math.abs(wy - sy)
+        const snX = this.snap(rawX), snY = this.snap(rawY)
+        const x = Math.min(snX, sx), y = Math.min(snY, sy)
+        const w = Math.abs(snX - sx), h = Math.abs(snY - sy)
         this.roomPreviewLayer.clear()
         this.roomPreviewLayer.lineStyle(2, 0xffff00, 1)
         this.roomPreviewLayer.fillStyle(0xffff00, 0.1)
@@ -509,7 +738,7 @@ export default class EditorScene extends Phaser.Scene {
       if (this.activeTool === 'add-room') {
         this.isDrawingRoom = true
         this.roomDrawSi = this.spaceIndexAt(wx, wy)
-        this.roomDrawStart = { wx, wy }
+        this.roomDrawStart = { wx: this.snap(wx), wy: this.snap(wy) }
         return
       }
 
@@ -518,7 +747,7 @@ export default class EditorScene extends Phaser.Scene {
         const space = this.mapData.spaces[si]
         const ox = space.offset?.x ?? 0
         const oy = space.offset?.y ?? 0
-        space.spawnPoint = { x: Math.round(wx - ox), y: Math.round(wy - oy) }
+        space.spawnPoint = { x: this.snap(wx - ox), y: this.snap(wy - oy) }
         this.spawnLayer.clear()
         for (let i = 0; i < this.mapData.spaces.length; i++) this.drawSpawnMarker(i)
         this.autoSave()
@@ -608,8 +837,8 @@ export default class EditorScene extends Phaser.Scene {
         return
       }
 
-      // Setas → mover (Shift = 10px)
-      const step = event.shiftKey ? 10 : 1
+      // Setas → mover (1 grid step; Shift = 4× grid)
+      const step = event.shiftKey ? this.gridSize * 4 : this.gridSize
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' ||
           event.key === 'ArrowUp'   || event.key === 'ArrowDown') {
         event.preventDefault()
@@ -649,14 +878,14 @@ export default class EditorScene extends Phaser.Scene {
 
     if (item.kind === 'room') {
       const r = space.rooms![item.ri]
-      r.x = Math.round(cx - ox); r.y = Math.round(cy - oy)
+      r.x = this.snap(cx - ox); r.y = this.snap(cy - oy)
     } else if (item.kind === 'room-obj') {
       const r = space.rooms![item.ri]
       const o = r.objects![item.oi]
-      o.x = Math.round(cx - (ox + r.x)); o.y = Math.round(cy - (oy + r.y))
+      o.x = this.snap(cx - (ox + r.x)); o.y = this.snap(cy - (oy + r.y))
     } else if (item.kind === 'space-obj') {
       const o = space.objects![item.oi]
-      o.x = Math.round(cx - ox); o.y = Math.round(cy - oy)
+      o.x = this.snap(cx - ox); o.y = this.snap(cy - oy)
     }
 
     this.labels.forEach(l => l.destroy()); this.labels = []
@@ -679,13 +908,13 @@ export default class EditorScene extends Phaser.Scene {
       const room  = space.rooms![ri]
       const ox    = space.offset?.x ?? 0, oy = space.offset?.y ?? 0
       if (!room.objects) room.objects = []
-      room.objects.push({ type: this.activeObjectType, x: Math.round(wx - (ox + room.x)), y: Math.round(wy - (oy + room.y)) })
+      room.objects.push({ type: this.activeObjectType, x: this.snap(wx - (ox + room.x)), y: this.snap(wy - (oy + room.y)) })
     } else {
       const si    = this.spaceIndexAt(wx, wy)
       const space = this.mapData.spaces[si]
       const ox    = space.offset?.x ?? 0, oy = space.offset?.y ?? 0
       if (!space.objects) space.objects = []
-      space.objects.push({ type: this.activeObjectType, x: Math.round(wx - ox), y: Math.round(wy - oy) })
+      space.objects.push({ type: this.activeObjectType, x: this.snap(wx - ox), y: this.snap(wy - oy) })
     }
 
     this.redrawAll(); this.autoSave()
@@ -711,9 +940,9 @@ export default class EditorScene extends Phaser.Scene {
     space.rooms.push({
       id: `room-${Date.now()}`,
       name: name.trim(),
-      x: Math.round(x - ox + rw / 2),
-      y: Math.round(y - oy + rh / 2),
-      width: Math.round(rw), height: Math.round(rh),
+      x: this.snap(x - ox + rw / 2),
+      y: this.snap(y - oy + rh / 2),
+      width: this.snap(rw), height: this.snap(rh),
       floorColor: '#eeeeee', wallColor: '#5d4037',
       objects: [],
     })
@@ -732,6 +961,9 @@ export default class EditorScene extends Phaser.Scene {
       return { kind: 'room', si: item.si, ri: item.ri,
         name: r.name, x: r.x, y: r.y, width: r.width, height: r.height,
         floorColor: r.floorColor ?? '#eeeeee', wallColor: r.wallColor ?? '#5d4037',
+        floorTexture: r.floorTexture ?? '', wallTexture: r.wallTexture ?? '',
+        doorSide: r.door?.side ?? '', doorOffset: r.door?.offset ?? 0,
+        doorWidth: r.door?.width ?? 80, doorLabel: r.door?.label ?? '',
         worldX: ox + r.x, worldY: oy + r.y }
     }
     if (item.kind === 'room-obj') {
@@ -759,6 +991,19 @@ export default class EditorScene extends Phaser.Scene {
       r.name = info.name; r.x = info.x; r.y = info.y
       r.width = info.width; r.height = info.height
       r.floorColor = info.floorColor; r.wallColor = info.wallColor
+      r.floorTexture = info.floorTexture || undefined
+      r.wallTexture = info.wallTexture || undefined
+      // Porta
+      if (info.doorSide) {
+        r.door = {
+          side: info.doorSide as 'top' | 'bottom' | 'left' | 'right',
+          offset: info.doorOffset ?? 0,
+          width: info.doorWidth ?? 80,
+          label: info.doorLabel || undefined,
+        }
+      } else {
+        r.door = undefined
+      }
     } else if (info.kind === 'room-obj') {
       const o = space?.rooms?.[info.ri]?.objects?.[info.oi]
       if (!o) return
@@ -850,7 +1095,19 @@ export default class EditorScene extends Phaser.Scene {
 
   // ── Utilitários ──────────────────────────────────────────────────────────────
 
+  /** Arredonda valor para o grid mais próximo */
+  private snap(v: number): number {
+    return Math.round(v / this.gridSize) * this.gridSize
+  }
+
   private hexToNum(hex: string): number {
     return parseInt(hex.replace('#', ''), 16)
   }
+
+  setGridSize(size: number) {
+    this.gridSize = Math.max(4, size)
+    this.redrawAll()
+  }
+
+  getGridSize() { return this.gridSize }
 }

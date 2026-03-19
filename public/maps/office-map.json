@@ -17,7 +17,8 @@
       "floor": {
         "tileSize": 50,
         "colorA": "#ffffff",
-        "colorB": "#e0e0e0"
+        "colorB": "#e0e0e0",
+        "texture": "floor_stone"
       },
       "rooms": [
         {
@@ -29,6 +30,8 @@
           "height": 250,
           "floorColor": "#faf0e6",
           "wallColor": "#795548",
+          "floorTexture": "floor_wood",
+          "wallTexture": "wall_brown",
           "door": {
             "side": "bottom",
             "label": "🚪 Diretoria",
@@ -62,6 +65,8 @@
           "height": 300,
           "floorColor": "#dcdcdc",
           "wallColor": "#28769a",
+          "floorTexture": "floor_gray",
+          "wallTexture": "wall_teal",
           "door": {
             "side": "left",
             "label": "📊 Reunião",
@@ -81,7 +86,7 @@
             {
               "type": "chair",
               "x": 0,
-              "y": -85
+              "y": -80
             },
             {
               "type": "chair",
@@ -124,6 +129,8 @@
           "height": 400,
           "floorColor": "#e8d4b0",
           "wallColor": "#795548",
+          "floorTexture": "floor_ceramic1",
+          "wallTexture": "wall_brown_alt",
           "door": {
             "side": "left",
             "label": "☕ Copa",
@@ -154,50 +161,82 @@
               "type": "trash",
               "x": 120,
               "y": 160
+            },
+            {
+              "type": "wall_monitor",
+              "x": 9,
+              "y": -99
             }
           ]
+        },
+        {
+          "id": "room-1773887655345",
+          "name": "Diagramação",
+          "x": 1840,
+          "y": 832,
+          "width": 320,
+          "height": 320,
+          "floorColor": "#999999",
+          "wallColor": "#9a8c47",
+          "objects": [
+            {
+              "type": "worker2",
+              "x": 8,
+              "y": -120
+            },
+            {
+              "type": "npc_character",
+              "x": 112,
+              "y": -144
+            }
+          ],
+          "door": {
+            "side": "left",
+            "offset": 10,
+            "width": 80
+          }
         }
       ],
       "objects": [
         {
           "type": "workstation",
-          "x": 253,
-          "y": 428
+          "x": 240,
+          "y": 416
         },
         {
           "type": "workstation",
-          "x": 316,
-          "y": 431
+          "x": 304,
+          "y": 416
         },
         {
           "type": "workstation",
-          "x": 382,
-          "y": 433
+          "x": 368,
+          "y": 416
         },
         {
           "type": "workstation",
-          "x": 250,
-          "y": 500
+          "x": 240,
+          "y": 480
         },
         {
           "type": "workstation",
-          "x": 313,
-          "y": 502
+          "x": 304,
+          "y": 480
         },
         {
           "type": "workstation",
-          "x": 378,
-          "y": 502
+          "x": 368,
+          "y": 480
         },
         {
           "type": "workstation",
-          "x": 442,
-          "y": 504
+          "x": 432,
+          "y": 480
         },
         {
           "type": "workstation",
-          "x": 448,
-          "y": 434
+          "x": 432,
+          "y": 416
         },
         {
           "type": "workstation",
@@ -283,6 +322,36 @@
           "type": "plant",
           "x": 925,
           "y": 802
+        },
+        {
+          "type": "workstation",
+          "x": 974,
+          "y": 1085
+        },
+        {
+          "type": "exec_chair",
+          "x": 558,
+          "y": 735
+        },
+        {
+          "type": "worker1",
+          "x": 1784,
+          "y": 712
+        },
+        {
+          "type": "worker4",
+          "x": 1720,
+          "y": 712
+        },
+        {
+          "type": "int_door",
+          "x": 732,
+          "y": 678
+        },
+        {
+          "type": "int_door",
+          "x": 1048,
+          "y": 752
         }
       ]
     },
@@ -314,6 +383,8 @@
           "height": 500,
           "floorColor": "#fce4ec",
           "wallColor": "#ad1457",
+          "floorTexture": "floor_red",
+          "wallTexture": "wall_red",
           "door": {
             "side": "left",
             "label": "🛋️ Lounge",
@@ -362,6 +433,8 @@
           "height": 340,
           "floorColor": "#e8eaf6",
           "wallColor": "#283593",
+          "floorTexture": "floor_purple",
+          "wallTexture": "wall_purple",
           "door": {
             "side": "left",
             "label": "📚 Biblioteca",
