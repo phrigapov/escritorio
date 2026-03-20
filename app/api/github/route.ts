@@ -42,7 +42,7 @@ interface IssueCacheEntry {
   timestamp: number
 }
 const issueCache = new Map<string, IssueCacheEntry>()
-const CACHE_TTL = 2 * 60 * 1000 // 2 minutos
+const CACHE_TTL = 15 * 1000 // 15 segundos — alinhado ao auto-refresh do frontend
 
 // Busca issues do usuário na org inteira (search API, rápido) e traz o status do projeto
 // junto na mesma query. O GitHub filtra por assignee server-side.
@@ -79,11 +79,15 @@ async function getProjectIssuesForUser(org: string, projectNumber: number, usern
               projectItems(first: 5, includeArchived: false) {
                 nodes {
                   project { number }
-                  fieldValues(first: 8) {
+                  fieldValues(first: 20) {
                     nodes {
                       ... on ProjectV2ItemFieldSingleSelectValue {
                         name
                         field { ... on ProjectV2SingleSelectField { name } }
+                      }
+                      ... on ProjectV2ItemFieldDateValue {
+                        date
+                        field { ... on ProjectV2Field { name } }
                       }
                     }
                   }
@@ -119,7 +123,11 @@ async function getProjectIssuesForUser(org: string, projectNumber: number, usern
       const statusField = projectItem?.fieldValues?.nodes?.find(
         (f: any) => f.field?.name?.toLowerCase() === 'status'
       )
-      return { ...issue, projectStatus: statusField?.name || '' }
+      const endDateField = projectItem?.fieldValues?.nodes?.find(
+        (f: any) => f.date !== undefined &&
+          (f.field?.name?.toLowerCase().includes('end') || f.field?.name?.toLowerCase().includes('fim'))
+      )
+      return { ...issue, projectStatus: statusField?.name || '', endDate: endDateField?.date || '' }
     })
 
   issueCache.set(cacheKey, { issues, timestamp: Date.now() })
@@ -138,6 +146,13 @@ export async function GET(req: NextRequest) {
 
   const searchParams = req.nextUrl.searchParams
   const username = searchParams.get('username') || ''
+  const nocache = searchParams.get('nocache') === '1'
+
+  // Invalidar cache se solicitado (ex: após mover issue)
+  if (nocache && username) {
+    const cacheKey = `project:${ORG}/${PROJECT_NUMBER}:${username}`
+    issueCache.delete(cacheKey)
+  }
 
   try {
     // Buscar dados básicos do repositório + PRs da org onde o usuário está envolvido
@@ -178,6 +193,7 @@ export async function GET(req: NextRequest) {
           url: issue.url,
           repo: issue.repository?.nameWithOwner || '',
           status,
+          endDate: issue.endDate || '',
         }
 
         myIssues.push(normalized)
@@ -197,37 +213,157 @@ export async function GET(req: NextRequest) {
       console.error('Erro ao buscar issues:', projectError)
     }
 
-    // Buscar PRs abertos da org onde o usuário está envolvido (assignee, author ou review-requested)
+    // Buscar PRs abertos da org onde o usuário está envolvido + PRs aguardando review
     let pulls: any[] = []
+    let reviewCount = 0
     try {
       if (username) {
         const prQuery = `
-          query($q: String!) {
-            search(query: $q, type: ISSUE, first: 20) {
+          query($q: String!, $qReview: String!) {
+            myPrs: search(query: $q, type: ISSUE, first: 20) {
               nodes {
                 ... on PullRequest {
-                  number
-                  title
-                  state
-                  isDraft
-                  url
-                  createdAt
+                  number title state isDraft url createdAt
                   author { login }
                   headRefName
                   repository { nameWithOwner }
                 }
               }
             }
+            toReview: search(query: $qReview, type: ISSUE, first: 1) {
+              issueCount
+            }
           }
         `
         const prData = await ghGraphQL(prQuery, {
           q: `is:pr is:open org:${ORG} involves:${username}`,
+          qReview: `is:pr is:open org:${ORG} review-requested:${username} -author:${username}`,
         })
-        pulls = (prData.search?.nodes || []).filter((n: any) => n?.number !== undefined)
+        pulls = (prData.myPrs?.nodes || []).filter((n: any) => n?.number !== undefined)
+        reviewCount = prData.toReview?.issueCount || 0
       }
     } catch (prError) {
       console.error('Erro ao buscar PRs:', prError)
     }
+
+    // Buscar menções e sprint da equipe em paralelo
+    let mentions: any[] = []
+    let teamSprint: any[] = []
+
+    await Promise.all([
+      // Mentions
+      (async () => {
+        try {
+          if (!username) return
+          const mentionsQuery = `
+            query($q: String!) {
+              search(query: $q, type: ISSUE, first: 15) {
+                nodes {
+                  __typename
+                  ... on Issue {
+                    number title url createdAt
+                    author { login }
+                    repository { nameWithOwner }
+                  }
+                  ... on PullRequest {
+                    number title url createdAt
+                    author { login }
+                    repository { nameWithOwner }
+                  }
+                }
+              }
+            }
+          `
+          const mentionsData = await ghGraphQL(mentionsQuery, {
+            q: `mentions:${username} sort:updated-desc`,
+          })
+          mentions = (mentionsData.search?.nodes || [])
+            .filter((n: any) => n?.number !== undefined)
+            .map((n: any) => ({
+              number: n.number,
+              title: n.title,
+              type: n.__typename === 'PullRequest' ? 'pr' : 'issue',
+              repo: n.repository?.nameWithOwner || '',
+              url: n.url,
+              createdAt: n.createdAt,
+              author: n.author?.login || 'unknown',
+            }))
+        } catch (mentionsError) {
+          console.error('Erro ao buscar menções:', mentionsError)
+        }
+      })(),
+
+      // Team sprint
+      (async () => {
+        try {
+          const teamSprintQuery = `
+            query($org: String!, $number: Int!) {
+              organization(login: $org) {
+                projectV2(number: $number) {
+                  items(first: 100) {
+                    nodes {
+                      content {
+                        ... on Issue {
+                          number title url
+                          repository { nameWithOwner }
+                          assignees(first: 5) { nodes { login avatarUrl } }
+                        }
+                      }
+                      fieldValues(first: 20) {
+                        nodes {
+                          __typename
+                          ... on ProjectV2ItemFieldSingleSelectValue {
+                            name
+                            field { ... on ProjectV2SingleSelectField { name } }
+                          }
+                          ... on ProjectV2ItemFieldDateValue {
+                            date
+                            field { ... on ProjectV2Field { name } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          `
+          const teamData = await ghGraphQL(teamSprintQuery, {
+            org: ORG,
+            number: parseInt(PROJECT_NUMBER),
+          })
+          const items = teamData.organization?.projectV2?.items?.nodes || []
+          teamSprint = items
+            .filter((item: any) => {
+              const statusField = item.fieldValues?.nodes?.find(
+                (f: any) => f.__typename === 'ProjectV2ItemFieldSingleSelectValue' &&
+                  f.field?.name?.toLowerCase() === 'status'
+              )
+              return statusField?.name?.toLowerCase().includes('sprint')
+            })
+            .filter((item: any) => item.content?.number !== undefined)
+            .map((item: any) => {
+              const endDateField = item.fieldValues?.nodes?.find(
+                (f: any) => f.__typename === 'ProjectV2ItemFieldDateValue' &&
+                  (f.field?.name?.toLowerCase().includes('end') || f.field?.name?.toLowerCase().includes('fim'))
+              )
+              return {
+                number: item.content.number,
+                title: item.content.title,
+                url: item.content.url,
+                repo: item.content.repository?.nameWithOwner || '',
+                assignees: (item.content.assignees?.nodes || []).map((a: any) => ({
+                  login: a.login,
+                  avatarUrl: a.avatarUrl,
+                })),
+                endDate: endDateField?.date || '',
+              }
+            })
+        } catch (teamSprintError) {
+          console.error('Erro ao buscar sprint da equipe:', teamSprintError)
+        }
+      })(),
+    ])
 
     return NextResponse.json({
       repo: {
@@ -245,6 +381,7 @@ export async function GET(req: NextRequest) {
       backlog: backlogIssues,
       sprint: sprintIssues,
       test: testIssues,
+      reviewCount,
       pulls: pulls.map((p: any) => ({
         number: p.number,
         title: p.title,
@@ -263,6 +400,8 @@ export async function GET(req: NextRequest) {
         date: c.commit?.author?.date,
         url: c.html_url,
       })),
+      mentions,
+      teamSprint,
     })
   } catch (err) {
     console.error('GitHub API Error:', err)

@@ -242,6 +242,19 @@ export async function GET(
       .map((b: any) => b.ref?.name)
       .filter(Boolean)
 
+    // Colaboradores do repositório (para o assignee picker)
+    let repoCollaborators: { login: string; avatarUrl: string }[] = []
+    try {
+      const collabRes = await fetch(
+        `https://api.github.com/repos/${OWNER}/${REPO}/collaborators?per_page=50`,
+        { headers: REST_HEADERS }
+      )
+      if (collabRes.ok) {
+        const collabData = await collabRes.json()
+        repoCollaborators = collabData.map((c: any) => ({ login: c.login, avatarUrl: c.avatar_url }))
+      }
+    } catch { /* silently ignore */ }
+
     return NextResponse.json({
       id: issue.id,
       number: issue.number,
@@ -290,6 +303,7 @@ export async function GET(
       projectItemId,
       projectTitle,
       projectFields,
+      repoCollaborators,
     })
   } catch (err) {
     console.error('GitHub Issue Detail Error:', err)
