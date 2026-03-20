@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
+import type { Socket } from 'socket.io-client'
 import Toolbar from './Toolbar'
 import PerfMonitor from './PerfMonitor'
 import GitHubPanel from './GitHubPanel'
@@ -20,11 +21,12 @@ interface User {
 
 interface GameProps {
   user: User
+  socket: Socket | null
   onSwitchMode: () => void
   onLogout: () => void
 }
 
-export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
+export default function Game({ user, socket, onSwitchMode, onLogout }: GameProps) {
   const gameRef        = useRef<any>(null)
   const editorSceneRef = useRef<any>(null)
   const [isLoading, setIsLoading]   = useState(true)
@@ -35,9 +37,10 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
   const [claudeOpen, setClaudeOpen] = useState(false)
   const [perfOpen, setPerfOpen]     = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [gameSocket, setGameSocket] = useState<any>(null)
 
   const displayName = user.name || user.username
+  const isAdmin = user.username === 'phrigapov'
+  const [officeLocked, setOfficeLocked] = useState(false)
 
   // ── Entrar/sair do editor ──────────────────────────────────────────────────
   const openEditor = useCallback(() => {
@@ -65,14 +68,6 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
     const main = game.scene.getScene('MainScene')
     main?.scene.restart()
     setEditorOpen(false)
-    // Re-extract socket after scene restart
-    game.events.on('step', function reExtractSocket() {
-      const m = game.scene?.getScene('MainScene') as any
-      if (m?.socket) {
-        setGameSocket(m.socket)
-        game.events.off('step', reExtractSocket)
-      }
-    })
   }, [])
 
   // ── Inicializar Phaser ─────────────────────────────────────────────────────
@@ -111,15 +106,10 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
 
         gameRef.current = new Phaser.Game(config)
         gameRef.current.registry.set('username', displayName)
-
-        // Wait for MainScene to be ready, then grab its socket
-        gameRef.current.events.on('step', function extractSocket() {
-          const main = gameRef.current?.scene?.getScene('MainScene') as any
-          if (main?.socket) {
-            setGameSocket(main.socket)
-            gameRef.current.events.off('step', extractSocket)
-          }
-        })
+        gameRef.current.registry.set('githubUsername', user.username)
+        gameRef.current.registry.set('loginType', user.loginType)
+        // Socket é passado via prop — MainScene o lê do registry
+        if (socket) gameRef.current.registry.set('socket', socket)
 
         setIsLoading(false)
 
@@ -137,6 +127,9 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
       }
     }
 
+    // Aguarda socket estar disponível — ele é criado em page.tsx num efeito separado
+    if (!socket) return
+
     initGame()
 
     return () => {
@@ -146,7 +139,23 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
         gameRef.current = null
       }
     }
-  }, [user, displayName])
+  }, [user, displayName, socket])
+
+  // ── Estado de bloqueio do escritório (somente admin) ──────────────────────
+  useEffect(() => {
+    if (!socket || !isAdmin) return
+    const onLocked = (locked: boolean) => setOfficeLocked(locked)
+    socket.on('office-locked', onLocked)
+    socket.emit('request-office-status')
+    return () => { socket.off('office-locked', onLocked) }
+  }, [socket, isAdmin])
+
+  const handleToggleLock = useCallback(() => {
+    if (!socket) return
+    const newLocked = !officeLocked
+    setOfficeLocked(newLocked)                          // update otimista
+    socket.emit('admin-lock-office', { locked: newLocked })
+  }, [socket, officeLocked])
 
   // ── Sincronizar estado do painel com a cena do jogo ────────────────────────
   useEffect(() => {
@@ -208,7 +217,7 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
           chatOpen={chatOpen}
           onToggleChat={() => setChatOpen(o => !o)}
           claudeOpen={claudeOpen}
-          onToggleClaude={() => setClaudeOpen(o => !o)}
+          onToggleClaude={isAdmin ? () => setClaudeOpen(o => !o) : undefined}
           githubOpen={githubOpen}
           onToggleGithub={() => setGithubOpen(o => !o)}
           editorOpen={editorOpen}
@@ -216,6 +225,8 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
           onCloseEditor={closeEditor}
           settingsOpen={settingsOpen}
           onToggleSettings={() => setSettingsOpen(o => !o)}
+          officeLocked={isAdmin ? officeLocked : undefined}
+          onToggleLock={isAdmin ? handleToggleLock : undefined}
         />
       )}
 
@@ -241,13 +252,13 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
         {!isLoading && chatOpen && (
           <ChatPanel
             displayName={displayName}
-            socket={gameSocket}
+            socket={socket}
             onClose={() => setChatOpen(false)}
           />
         )}
 
-        {/* Painel do Claude AI */}
-        {!isLoading && claudeOpen && (
+        {/* Painel do Claude AI — somente admin */}
+        {!isLoading && isAdmin && claudeOpen && (
           <ClaudePanel onClose={() => setClaudeOpen(false)} />
         )}
 
@@ -267,6 +278,7 @@ export default function Game({ user, onSwitchMode, onLogout }: GameProps) {
             onLogout={onLogout}
           />
         )}
+
       </div>
 
       {/* Monitor de desempenho */}

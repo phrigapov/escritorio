@@ -14,6 +14,8 @@ const handle = app.getRequestHandler()
 // ── Estado ───────────────────────────────────────────────────────────────────
 const players = {}              // socketId -> playerData
 const usernameSockets = {}      // username -> socketId (garante unicidade)
+let officeLocked = true         // padrão: escritório bloqueado até admin liberar
+const ADMIN_USERNAME = 'phrigapov'
 
 // Salas de chat
 const CHAT_ROOMS = ['geral', 'SME-GERAL', 'devs', 'suporte']
@@ -52,6 +54,46 @@ app.prepare().then(() => {
   io.on('connection', (socket) => {
     console.log(`✅  Novo socket: ${socket.id}`)
 
+    // ── Status do escritório (sob demanda) ────────────────────────────────
+    socket.on('request-office-status', () => {
+      socket.emit('office-locked', officeLocked)
+    })
+
+    // ── Bloquear / liberar escritório (somente admin) ──────────────────────
+    socket.on('admin-lock-office', (data) => {
+      const player = players[socket.id]
+      if (!player || !player.isAdmin) return
+
+      officeLocked = !!data.locked
+      io.emit('office-locked', officeLocked)
+      console.log(`🔒  Escritório ${officeLocked ? 'BLOQUEADO' : 'LIBERADO'} por ${player.username}`)
+
+      if (officeLocked) {
+        // Expulsar todos os jogadores GitHub que não são admin
+        Object.keys(players).forEach(id => {
+          const p = players[id]
+          if (p.loginType === 'github' && !p.isAdmin) {
+            const s = io.sockets.sockets.get(id)
+            if (s) {
+              s.emit('force-disconnect', { reason: 'office-locked' })
+              s.disconnect(true)
+            }
+          }
+        })
+      }
+    })
+
+    // ── Lista de jogadores (sob demanda) ──────────────────────────────────
+    socket.on('request-players-list', () => {
+      const list = Object.values(players).map(p => ({
+        id: p.id,
+        username: p.username,
+        status: p.status || 'online',
+        headless: p.headless || false,
+      }))
+      socket.emit('players-list', list)
+    })
+
     // ── Histórico de chat ──────────────────────────────────────────────────
     socket.on('request-chat-history', (data) => {
       const room = (data && data.room) || 'geral'
@@ -80,15 +122,31 @@ app.prepare().then(() => {
         delete players[oldId]
       }
 
+      const loginType      = data.loginType      || 'github'
+      const githubUsername = data.githubUsername || username
+
+      // Admin nunca é bloqueado — verificado pelo handle GitHub, não pelo display name
+      const isAdmin = githubUsername === ADMIN_USERNAME
+
+      // Bloquear entrada de usuários GitHub quando escritório está fechado
+      if (officeLocked && loginType === 'github' && !isAdmin) {
+        socket.emit('force-disconnect', { reason: 'office-locked' })
+        socket.disconnect(true)
+        return
+      }
+
       usernameSockets[username] = socket.id
       players[socket.id] = {
         id: socket.id,
         username,
+        githubUsername,
         x: data.x,
         y: data.y,
         color: data.color,
         status: data.status || 'online',
         headless: data.headless || false,
+        loginType,
+        isAdmin,
       }
 
       // Enviar jogadores existentes (para posição no mapa)
@@ -184,6 +242,11 @@ app.prepare().then(() => {
 
       // Confirmar para o remetente
       socket.emit('dm-message', payload)
+    })
+
+    // ── Porta ──────────────────────────────────────────────────────────────
+    socket.on('door-action', (data) => {
+      socket.broadcast.emit('door-action', data)
     })
 
     // ── Status ─────────────────────────────────────────────────────────────

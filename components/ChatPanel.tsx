@@ -11,16 +11,18 @@ import SidePanel from './SidePanel'
 const ROOMS = ['geral', 'SME-GERAL', 'devs', 'suporte'] as const
 type Room = (typeof ROOMS)[number]
 
-type PlayerStatus = 'online' | 'busy' | 'away'
+type PlayerStatus = 'online' | 'busy' | 'away' | 'working'
 const STATUS_COLORS: Record<PlayerStatus, string> = {
   online: 'bg-green-500',
   busy: 'bg-red-500',
   away: 'bg-yellow-500',
+  working: 'bg-blue-500',
 }
 const STATUS_LABELS: Record<PlayerStatus, string> = {
   online: 'Online',
   busy: 'Ocupado',
   away: 'Ausente',
+  working: 'Trabalhando',
 }
 
 interface ChatMessage {
@@ -131,8 +133,9 @@ export default function ChatPanel({ displayName, socket, onClose, embedded = fal
     socket.on('dm-history', onDmHistory)
     socket.on('players-list', onPlayersList)
 
-    // Pedir histórico
+    // Pedir histórico e lista atual de jogadores
     ROOMS.forEach(room => socket.emit('request-chat-history', { room }))
+    socket.emit('request-players-list')
 
     return () => {
       socket.off('chat-message', onMessage)
@@ -207,7 +210,7 @@ export default function ChatPanel({ displayName, socket, onClose, embedded = fal
             value={myStatus}
             onChange={(e) => changeStatus(e.target.value as PlayerStatus)}
             className={`rounded border border-border bg-secondary px-1.5 py-0.5 text-[10px] outline-none ${
-              myStatus === 'busy' ? 'text-red-400' : myStatus === 'away' ? 'text-yellow-400' : 'text-green-400'
+              myStatus === 'busy' ? 'text-red-400' : myStatus === 'away' ? 'text-yellow-400' : myStatus === 'working' ? 'text-blue-400' : 'text-green-400'
             }`}
           >
             {Object.entries(STATUS_LABELS).map(([k, v]) => (

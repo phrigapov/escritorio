@@ -1,20 +1,22 @@
 import * as Phaser from 'phaser'
-import { io, Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 import { MapLoader, type DoorZone } from '../MapLoader'
 import type { MapDefinition } from '../types/MapDefinition'
 
-type PlayerStatus = 'online' | 'busy' | 'away'
+type PlayerStatus = 'online' | 'busy' | 'away' | 'working'
 
 const STATUS_COLORS: Record<PlayerStatus, number> = {
-  online: 0x2ecc71,
-  busy:   0xe74c3c,
-  away:   0xf39c12,
+  online:   0x2ecc71,
+  busy:     0xe74c3c,
+  away:     0xf39c12,
+  working:  0x3498db,
 }
 
 const STATUS_LABELS: Record<PlayerStatus, string> = {
-  online: 'Online',
-  busy:   'Ocupado',
-  away:   'Ausente',
+  online:   'Online',
+  busy:     'Ocupado',
+  away:     'Ausente',
+  working:  'Trabalhando',
 }
 
 interface Player {
@@ -54,6 +56,8 @@ export default class MainScene extends Phaser.Scene {
     D: Phaser.Input.Keyboard.Key
   }
   private username!: string
+  private loginType!: string
+  private githubUsername!: string
   private playerColor!: number
   private walls!: Phaser.Physics.Arcade.StaticGroup
   private lastDirection: string = 'down'
@@ -71,6 +75,8 @@ export default class MainScene extends Phaser.Scene {
   private doors: DoorZone[] = []
   private doorPrompt?: Phaser.GameObjects.Text
   private nearestDoor: DoorZone | null = null
+  // Listeners registrados por esta cena — removidos no restart para evitar duplicatas
+  private _sceneListeners: Array<[string, (...args: any[]) => void]> = []
 
   constructor() {
     super('MainScene')
@@ -350,7 +356,9 @@ export default class MainScene extends Phaser.Scene {
   create() {
     this.createProceduralAssets()
 
-    this.username = this.registry.get('username') || 'Jogador'
+    this.username       = this.registry.get('username')       || 'Jogador'
+    this.loginType      = this.registry.get('loginType')      || 'github'
+    this.githubUsername = this.registry.get('githubUsername') || this.username
     this.playerColor = Math.random() * 0xffffff
 
     this.walls = this.physics.add.staticGroup()
@@ -369,24 +377,26 @@ export default class MainScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight)
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight)
 
-    // Reutiliza socket existente (se cena foi reiniciada após editor) ou cria novo
-    if (this.socket?.connected) {
-      this.socket.off() // remove listeners antigos antes de registrar novos
-    } else {
-      // Conexão socket otimizada com timeout reduzido
-      const url = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SOCKET_URL) || 'http://localhost:3000'
-      this.socket = io(url, { timeout: 3000, reconnection: true, reconnectionDelay: 500 })
+    // Socket criado em page.tsx e passado via registry — nunca chamar io() aqui
+    this.socket = this.registry.get('socket') as Socket
+    if (!this.socket) {
+      console.error('[MainScene] Socket não encontrado no registry.')
+      return
     }
+    // Remove apenas os listeners desta cena (evita duplicatas em restart após editor)
+    this.removeSceneListeners()
 
     this.createPlayer()
     this.setupControls()
     this.setupNetworkEvents()
 
     this.socket.emit('player-joined', {
-      username: this.username,
-      x: this.player.x,
-      y: this.player.y,
-      color: this.playerColor,
+      username:       this.username,
+      githubUsername: this.githubUsername,
+      x:              this.player.x,
+      y:              this.player.y,
+      color:          this.playerColor,
+      loginType:      this.loginType,
     })
 
     this.createHUD()
@@ -426,12 +436,10 @@ export default class MainScene extends Phaser.Scene {
 
   // Limpa tudo ao reiniciar/parar a cena (editor, reload)
   shutdown() {
-    // Remove input DOM do chat
     if (this.chatInputElement) {
       this.chatInputElement.remove()
       this.chatInputElement = undefined
     }
-    // Destrói sprites de jogadores remotos
     this.otherPlayers.forEach(p => {
       p.chatBubble?.destroy()
       p.chatBubbleHideEvent?.remove(false)
@@ -440,8 +448,8 @@ export default class MainScene extends Phaser.Scene {
       p.nameText.destroy()
     })
     this.otherPlayers.clear()
-    // Não desconecta o socket aqui — o servidor detecta reconexão pelo username
-    // e remove entradas duplicadas automaticamente
+    // Remove apenas os listeners desta cena — o socket permanece ativo
+    this.removeSceneListeners()
   }
 
   private createHUD() {
@@ -538,18 +546,38 @@ export default class MainScene extends Phaser.Scene {
     })
   }
 
+  /** Remove todos os listeners que esta cena registrou no socket compartilhado */
+  private removeSceneListeners() {
+    if (!this.socket) return
+    this._sceneListeners.forEach(([event, fn]) => this.socket.off(event, fn))
+    this._sceneListeners = []
+  }
+
+  /** Registra um listener no socket e guarda referência para remoção posterior */
+  private onSocket(event: string, fn: (...args: any[]) => void) {
+    this.socket.on(event, fn)
+    this._sceneListeners.push([event, fn])
+  }
+
   private setupNetworkEvents() {
-    this.socket.on('current-players', (players: Record<string, PlayerData>) => {
+    this.onSocket('connect', () => {
+      console.log('[Socket] Conectado ao servidor, id:', this.socket.id)
+    })
+    this.onSocket('connect_error', (err: Error) => {
+      console.error('[Socket] Erro de conexão:', err.message)
+    })
+
+    this.onSocket('current-players', (players: Record<string, PlayerData>) => {
       Object.keys(players).forEach(id => {
         if (id !== this.socket.id) this.addOtherPlayer(id, players[id])
       })
     })
 
-    this.socket.on('new-player', (data: { id: string, playerData: PlayerData }) => {
+    this.onSocket('new-player', (data: { id: string, playerData: PlayerData }) => {
       if (data.id !== this.socket.id) this.addOtherPlayer(data.id, data.playerData)
     })
 
-    this.socket.on('player-moved', (data: { id: string, x: number, y: number, direction?: string }) => {
+    this.onSocket('player-moved', (data: { id: string, x: number, y: number, direction?: string }) => {
       const otherPlayer = this.otherPlayers.get(data.id)
       if (otherPlayer) {
         this.tweens.add({ targets: otherPlayer.sprite, x: data.x, y: data.y, duration: 50, ease: 'Linear' })
@@ -557,7 +585,7 @@ export default class MainScene extends Phaser.Scene {
       }
     })
 
-    this.socket.on('player-disconnected', (id: string) => {
+    this.onSocket('player-disconnected', (id: string) => {
       const otherPlayer = this.otherPlayers.get(id)
       if (otherPlayer) {
         otherPlayer.chatBubble?.destroy()
@@ -569,7 +597,12 @@ export default class MainScene extends Phaser.Scene {
       }
     })
 
-    this.socket.on('player-status-changed', (data: { id: string, status: PlayerStatus }) => {
+    this.onSocket('door-action', (data: { index: number, open: boolean }) => {
+      const door = this.doors[data.index]
+      if (door && door.open !== data.open) this.applyDoorState(door, data.open)
+    })
+
+    this.onSocket('player-status-changed', (data: { id: string, status: PlayerStatus }) => {
       const otherPlayer = this.otherPlayers.get(data.id)
       if (otherPlayer) {
         otherPlayer.status = data.status
@@ -577,12 +610,11 @@ export default class MainScene extends Phaser.Scene {
       }
     })
 
-    this.socket.on('chat-message', (message: ChatMessage) => {
+    this.onSocket('chat-message', (message: ChatMessage) => {
       if (message.id === this.socket.id) {
         this.showOwnChatBubble(message.text)
         return
       }
-
       const otherPlayer = this.otherPlayers.get(message.id)
       if (otherPlayer) {
         this.showOtherPlayerChatBubble(otherPlayer, message.text)
@@ -769,8 +801,8 @@ export default class MainScene extends Phaser.Scene {
     bg.setDepth(48)
     this.menuObjects.push(bg)
 
-    const statuses: PlayerStatus[] = ['online', 'busy', 'away']
-    const angles = [-90, 30, 150]
+    const statuses: PlayerStatus[] = ['online', 'busy', 'away', 'working']
+    const angles = [-90, 0, 90, 180]
 
     statuses.forEach((status, i) => {
       const rad = Phaser.Math.DegToRad(angles[i])
@@ -841,12 +873,18 @@ export default class MainScene extends Phaser.Scene {
 
   private interactWithNearestDoor() {
     if (!this.nearestDoor) return
+    const index = this.doors.indexOf(this.nearestDoor)
+    if (index === -1) return
     const door = this.nearestDoor
-    door.open = !door.open
+    const open = !door.open
+    this.applyDoorState(door, open)
+    this.socket.emit('door-action', { index, open })
+  }
 
-    const targetAngle = door.open ? door.openAngle : door.closedAngle
+  private applyDoorState(door: DoorZone, open: boolean) {
+    door.open = open
+    const targetAngle = open ? door.openAngle : door.closedAngle
 
-    // Anima o container da porta (swing na dobradiça)
     this.tweens.add({
       targets: door.container,
       angle: targetAngle,
@@ -854,18 +892,14 @@ export default class MainScene extends Phaser.Scene {
       ease: 'Quad.easeInOut',
     })
 
-    if (door.open) {
-      // Abrir: remove colisão
+    if (open) {
       if (door.blocker) {
         this.walls.remove(door.blocker, true, true)
         door.blocker = this.add.rectangle(door.x, door.y, door.width, door.height, 0x000000, 0).setDepth(0)
       }
     } else {
-      // Fechar: adiciona colisão após a animação terminar
       this.time.delayedCall(300, () => {
-        if (door.blocker) {
-          door.blocker.destroy()
-        }
+        if (door.blocker) door.blocker.destroy()
         door.blocker = this.add.rectangle(door.x, door.y, door.width, door.height, 0x000000, 0).setDepth(0)
         this.walls.add(door.blocker)
         const body = door.blocker.body as Phaser.Physics.Arcade.StaticBody

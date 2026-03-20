@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { io, Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 import Toolbar from './Toolbar'
 import GitHubPanel from './GitHubPanel'
 import SettingsPanel from './SettingsPanel'
@@ -18,33 +18,33 @@ interface User {
 const GLASS_ROOM_X = 150
 const GLASS_ROOM_Y = 150
 
-export default function HeadlessMode({ user, onSwitchMode, onLogout }: { user: User; onSwitchMode: () => void; onLogout?: () => void }) {
+export default function HeadlessMode({ user, socket, onSwitchMode, onLogout }: { user: User; socket: Socket | null; onSwitchMode: () => void; onLogout?: () => void }) {
   const [chatOpen, setChatOpen]   = useState(false)
   const [claudeOpen, setClaudeOpen] = useState(false)
   const [githubOpen, setGithubOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [socket, setSocket] = useState<Socket | null>(null)
 
   const displayName = user.name || user.username
 
+  // Anuncia presença quando entra no modo headless (socket já existe, apenas emite player-joined)
   useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000'
-    const s = io(url, { timeout: 3000, reconnection: true, reconnectionDelay: 500 })
-
-    s.on('connect', () => {
-      s.emit('player-joined', {
-        username:  displayName,
-        x:         GLASS_ROOM_X,
-        y:         GLASS_ROOM_Y,
-        color:     0x667eea,
-        headless:  true,
+    if (!socket) return
+    const emitJoin = () => {
+      socket.emit('player-joined', {
+        username:       displayName,
+        githubUsername: user.username,
+        x:              GLASS_ROOM_X,
+        y:              GLASS_ROOM_Y,
+        color:          0x667eea,
+        headless:       true,
+        loginType:      user.loginType,
       })
-      s.emit('player-status-changed', { status: 'online' })
-      setSocket(s)
-    })
-
-    return () => { s.disconnect() }
-  }, [displayName])
+      socket.emit('player-status-changed', { status: 'online' })
+    }
+    if (socket.connected) emitJoin()
+    else socket.once('connect', emitJoin)
+    return () => { socket.off('connect', emitJoin) }
+  }, [socket, displayName, user.loginType])
 
   // ── Atalhos de teclado (mesmos do modo normal, sem editor) ────────────────
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function HeadlessMode({ user, onSwitchMode, onLogout }: { user: U
         chatOpen={chatOpen}
         onToggleChat={() => setChatOpen(o => !o)}
         claudeOpen={claudeOpen}
-        onToggleClaude={() => setClaudeOpen(o => !o)}
+        onToggleClaude={user.username === 'phrigapov' ? () => setClaudeOpen(o => !o) : undefined}
         githubOpen={githubOpen}
         onToggleGithub={() => setGithubOpen(o => !o)}
         settingsOpen={settingsOpen}
@@ -95,8 +95,8 @@ export default function HeadlessMode({ user, onSwitchMode, onLogout }: { user: U
           />
         )}
 
-        {/* Painel da IA do Paulo */}
-        {claudeOpen && (
+        {/* Painel da IA do Paulo — somente admin */}
+        {user.username === 'phrigapov' && claudeOpen && (
           <ClaudePanel onClose={() => setClaudeOpen(false)} />
         )}
 

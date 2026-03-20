@@ -82,3 +82,23 @@ Server → Client: `current-players`, `new-player`, `player-moved`, `player-disc
 - **Map format** is JSON in `public/maps/` — see `game/types/MapDefinition.ts` for the schema
 - **shadcn/ui** components live in `components/ui/` — add new ones with `npx shadcn-ui@latest add <component>`
 - **HeadlessMode** (`components/HeadlessMode.tsx`) is a text-based dev mode for testing multiplayer without Phaser, activated from the login page
+
+## Admin Rules
+
+**Admin username: `phrigapov`** (GitHub handle, never the display name).
+
+- The admin is **never blocked**, kicked, or locked out under any circumstance
+- `officeLocked` state never applies to the admin — neither on the server nor on the client
+- Admin status is always checked against `user.username` (GitHub handle) on the client and against `data.githubUsername` on the server — never against the display name (`user.name`), which can differ
+- The `githubUsername` field is sent in every `player-joined` event alongside `username` (display name) specifically for this check
+- These rules must be preserved in any refactor
+
+## Architecture Rule — Socket Connection
+
+**The Socket.io connection is created ONCE in `app/page.tsx` when the user logs in, and is passed down as a prop to all modes (`Game`, `HeadlessMode`).**
+
+- Switching between Game mode and Headless mode is **purely a UI change** — it must never create, destroy or reconnect the socket
+- `MainScene.ts` reads the socket from Phaser's registry (`this.registry.get('socket')`); it never calls `io()` directly
+- `HeadlessMode.tsx` receives the socket as a prop; it never calls `io()` directly
+- Only `page.tsx` calls `io()` and owns the socket lifecycle (created on login, destroyed on logout)
+- This ensures the server never sees duplicate usernames from the same user across mode switches

@@ -30,6 +30,9 @@ interface ToolbarProps {
 
   settingsOpen?: boolean
   onToggleSettings?: () => void
+
+  officeLocked?: boolean
+  onToggleLock?: () => void
 }
 
 export default function Toolbar({
@@ -47,6 +50,8 @@ export default function Toolbar({
   onCloseEditor,
   settingsOpen = false,
   onToggleSettings,
+  officeLocked,
+  onToggleLock,
 }: ToolbarProps) {
   const displayName = user.name || user.username
 
@@ -97,6 +102,17 @@ export default function Toolbar({
             onClick={editorOpen ? onCloseEditor : onOpenEditor}
           >
             {editorOpen ? 'Fechar Editor' : 'Editor (4)'}
+          </Button>
+        )}
+
+        {onToggleLock !== undefined && (
+          <Button
+            variant={officeLocked ? 'destructive' : 'default'}
+            size="xs"
+            onClick={onToggleLock}
+            title={officeLocked ? 'Escritório BLOQUEADO — clique para liberar' : 'Escritório LIBERADO — clique para bloquear'}
+          >
+            {officeLocked ? '🔒 Bloqueado' : '🔓 Liberado'}
           </Button>
         )}
 

@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { Pool } from 'pg'
+import fs from 'fs'
+import path from 'path'
 
-// ── Database pools por ambiente ──────────────────────────────────────────────
+// ── Enabled tools ─────────────────────────────────────────────────────────────
+
+function getEnabledTools(): string[] {
+  try {
+    const file = path.join(process.cwd(), 'ai-tools.json')
+    return JSON.parse(fs.readFileSync(file, 'utf-8')).enabled ?? []
+  } catch {
+    return ['postgres']
+  }
+}
+
+// ── Database pools ────────────────────────────────────────────────────────────
+
 const pools: Record<string, Pool> = {}
 
 function getPool(env: string): Pool {
@@ -18,43 +32,157 @@ function getPool(env: string): Pool {
   return pools[env]
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// ── GitHub helper ─────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `Você é a IA do Paulo, o assistente de IA do Escritório Virtual. Você ajuda os usuários com perguntas, tarefas e consultas ao banco de dados PostgreSQL.
+async function githubFetch(endpoint: string): Promise<any> {
+  const token = process.env.GITHUB_TOKEN
+  const res = await fetch(`https://api.github.com${endpoint}`, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : '',
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  })
+  if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`)
+  return res.json()
+}
 
-Quando o usuário pedir informações do banco de dados, use a função postgres_query para executar consultas SQL.
-- IMPORTANTE: Você só tem permissão de LEITURA. Use apenas SELECT.
-- Nunca execute DROP, DELETE, TRUNCATE, ALTER, INSERT, UPDATE ou qualquer comando de escrita.
-- Formate os resultados de forma legível
-- Se não souber o schema, primeiro liste as tabelas com: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
+// ── OpenAI client ─────────────────────────────────────────────────────────────
 
-Responda sempre em português brasileiro, de forma concisa e útil.`
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-const tools: OpenAI.ChatCompletionTool[] = [
-  {
+const WRITE_PATTERN = /^\s*(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE|COPY)\b/i
+
+// ── Tool definitions ──────────────────────────────────────────────────────────
+
+const TOOL_DEFS: Record<string, OpenAI.ChatCompletionTool> = {
+  postgres: {
     type: 'function',
     function: {
       name: 'postgres_query',
-      description:
-        'Executa uma consulta SQL READ-ONLY no banco de dados PostgreSQL. Use APENAS SELECT. Nunca execute comandos de escrita (INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE).',
+      description: 'Executa uma consulta SQL SELECT no banco de dados PostgreSQL (somente leitura).',
       parameters: {
         type: 'object',
         properties: {
-          sql: {
-            type: 'string',
-            description: 'A consulta SQL SELECT a ser executada (somente leitura)',
-          },
+          sql: { type: 'string', description: 'Consulta SQL SELECT a executar' },
         },
         required: ['sql'],
       },
     },
   },
-]
+  github: {
+    type: 'function',
+    function: {
+      name: 'github_query',
+      description:
+        'Consulta o repositório GitHub: lista issues, PRs, commits, conteúdo de arquivos, etc.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: {
+            type: 'string',
+            enum: ['list_issues', 'list_prs', 'list_commits', 'get_file', 'search_code'],
+            description: 'Ação a executar',
+          },
+          params: {
+            type: 'object',
+            description:
+              'Parâmetros da ação. Para get_file: {path}. Para search_code: {query}. Para list_issues/list_prs: {state, per_page}.',
+          },
+        },
+        required: ['action'],
+      },
+    },
+  },
+}
 
-// Comandos de escrita bloqueados
-const WRITE_PATTERN = /^\s*(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE|COPY)\b/i
+// ── System prompt builder ─────────────────────────────────────────────────────
+
+function buildSystemPrompt(enabledTools: string[], selectedDb: string): string {
+  const parts = [
+    'Você é a IA do Paulo, assistente do Escritório Virtual. Responda sempre em português brasileiro, de forma concisa e útil.',
+  ]
+
+  if (enabledTools.includes('postgres')) {
+    parts.push(
+      `\nVocê tem acesso ao banco de dados PostgreSQL (ambiente: ${selectedDb === 'prod' ? 'PRODUÇÃO' : 'DESENVOLVIMENTO'}). Use postgres_query para consultas SELECT. NUNCA execute comandos de escrita (INSERT, UPDATE, DELETE, DROP, etc.). Se não souber o schema, liste as tabelas primeiro: SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'.`
+    )
+  }
+
+  if (enabledTools.includes('github')) {
+    const owner = process.env.GITHUB_OWNER
+    const repo = process.env.GITHUB_REPO
+    parts.push(
+      `\nVocê tem acesso ao repositório GitHub ${owner}/${repo}. Use github_query para listar issues, PRs, commits ou buscar arquivos/código.`
+    )
+  }
+
+  return parts.join('\n')
+}
+
+// ── Tool executor ─────────────────────────────────────────────────────────────
+
+async function executeTool(name: string, args: any, selectedDb: string): Promise<string> {
+  if (name === 'postgres_query') {
+    const { sql } = args as { sql: string }
+    if (WRITE_PATTERN.test(sql)) {
+      return 'BLOQUEADO: Apenas SELECT é permitido.'
+    }
+    const pool = getPool(selectedDb)
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN READ ONLY')
+      const result = await client.query(sql)
+      await client.query('COMMIT')
+      return JSON.stringify({
+        rows: result.rows.slice(0, 100),
+        rowCount: result.rowCount,
+        fields: result.fields?.map((f: { name: string }) => f.name),
+      })
+    } catch (e: any) {
+      await client.query('ROLLBACK').catch(() => {})
+      return `Erro SQL: ${e.message}`
+    } finally {
+      client.release()
+    }
+  }
+
+  if (name === 'github_query') {
+    const { action, params = {} } = args as { action: string; params?: any }
+    const owner = process.env.GITHUB_OWNER
+    const repo = process.env.GITHUB_REPO
+    try {
+      let data: any
+      if (action === 'list_issues') {
+        const qs = new URLSearchParams({ state: params.state ?? 'open', per_page: String(params.per_page ?? 20) })
+        data = await githubFetch(`/repos/${owner}/${repo}/issues?${qs}`)
+      } else if (action === 'list_prs') {
+        const qs = new URLSearchParams({ state: params.state ?? 'open', per_page: String(params.per_page ?? 20) })
+        data = await githubFetch(`/repos/${owner}/${repo}/pulls?${qs}`)
+      } else if (action === 'list_commits') {
+        const qs = new URLSearchParams({ per_page: String(params.per_page ?? 20) })
+        data = await githubFetch(`/repos/${owner}/${repo}/commits?${qs}`)
+      } else if (action === 'get_file') {
+        data = await githubFetch(`/repos/${owner}/${repo}/contents/${params.path}`)
+        if (data.content) {
+          data = { path: data.path, content: Buffer.from(data.content, 'base64').toString('utf-8').slice(0, 4000) }
+        }
+      } else if (action === 'search_code') {
+        const q = encodeURIComponent(`${params.query} repo:${owner}/${repo}`)
+        data = await githubFetch(`/search/code?q=${q}&per_page=10`)
+      } else {
+        return `Ação desconhecida: ${action}`
+      }
+      return JSON.stringify(data)
+    } catch (e: any) {
+      return `Erro GitHub: ${e.message}`
+    }
+  }
+
+  return `Ferramenta desconhecida: ${name}`
+}
+
+// ── Handler ───────────────────────────────────────────────────────────────────
 
 interface Message {
   role: 'user' | 'assistant'
@@ -72,109 +200,63 @@ export async function POST(req: NextRequest) {
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages array is required' }, { status: 400 })
     }
-
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
     }
 
     const selectedModel = requestedModel || 'gpt-4.1'
     const selectedDb = database === 'prod' ? 'prod' : 'dev'
+    const enabledTools = getEnabledTools()
+
+    const activeToolDefs = enabledTools
+      .filter(id => TOOL_DEFS[id])
+      .map(id => TOOL_DEFS[id])
 
     const openaiMessages: OpenAI.ChatCompletionMessageParam[] = [
-      { role: 'system', content: SYSTEM_PROMPT + `\n\nVocê está conectado ao banco de dados: ${selectedDb === 'prod' ? 'PRODUÇÃO' : 'DESENVOLVIMENTO'}.` },
+      { role: 'system', content: buildSystemPrompt(enabledTools, selectedDb) },
       ...messages,
     ]
 
     let response = await openai.chat.completions.create({
       model: selectedModel,
       max_completion_tokens: 4096,
-      tools,
+      ...(activeToolDefs.length > 0 ? { tools: activeToolDefs } : {}),
       messages: openaiMessages,
     })
 
-    // Handle tool use loop
     let iterations = 0
-    const MAX_ITERATIONS = 5
-
-    while (
-      response.choices[0]?.finish_reason === 'tool_calls' &&
-      iterations < MAX_ITERATIONS
-    ) {
+    while (response.choices[0]?.finish_reason === 'tool_calls' && iterations < 5) {
       iterations++
-
       const assistantMessage = response.choices[0].message
       openaiMessages.push(assistantMessage)
 
-      const toolCalls = assistantMessage.tool_calls || []
-
-      for (const toolCall of toolCalls) {
+      for (const toolCall of assistantMessage.tool_calls ?? []) {
         if (toolCall.type !== 'function') continue
-        if (toolCall.function.name === 'postgres_query') {
-          const { sql } = JSON.parse(toolCall.function.arguments) as { sql: string }
-
-          // Bloquear comandos de escrita
-          if (WRITE_PATTERN.test(sql)) {
-            openaiMessages.push({
-              role: 'tool',
-              tool_call_id: toolCall.id,
-              content: 'BLOQUEADO: Apenas consultas SELECT são permitidas. Comandos de escrita não são autorizados.',
-            })
-            continue
-          }
-
-          try {
-            const pool = getPool(selectedDb)
-            const client = await pool.connect()
-            try {
-              // Forçar transação somente leitura
-              await client.query('BEGIN READ ONLY')
-              const result = await client.query(sql)
-              await client.query('COMMIT')
-              openaiMessages.push({
-                role: 'tool',
-                tool_call_id: toolCall.id,
-                content: JSON.stringify({
-                  rows: result.rows.slice(0, 100),
-                  rowCount: result.rowCount,
-                  fields: result.fields?.map((f: { name: string }) => f.name),
-                }),
-              })
-            } catch (dbError: any) {
-              await client.query('ROLLBACK').catch(() => {})
-              openaiMessages.push({
-                role: 'tool',
-                tool_call_id: toolCall.id,
-                content: `Erro SQL: ${dbError.message}`,
-              })
-            } finally {
-              client.release()
-            }
-          } catch (connError: any) {
-            openaiMessages.push({
-              role: 'tool',
-              tool_call_id: toolCall.id,
-              content: `Erro de conexão: ${connError.message}`,
-            })
-          }
-        }
+        const args = JSON.parse(toolCall.function.arguments)
+        const result = await executeTool(toolCall.function.name, args, selectedDb)
+        openaiMessages.push({ role: 'tool', tool_call_id: toolCall.id, content: result })
       }
 
       response = await openai.chat.completions.create({
         model: selectedModel,
         max_completion_tokens: 4096,
-        tools,
+        ...(activeToolDefs.length > 0 ? { tools: activeToolDefs } : {}),
         messages: openaiMessages,
       })
     }
 
-    const textContent = response.choices[0]?.message?.content || ''
+    const textContent = response.choices[0]?.message?.content
+    if (!textContent) {
+      const reason = response.choices[0]?.finish_reason
+      return NextResponse.json(
+        { error: reason === 'tool_calls' ? 'Limite de chamadas atingido sem resposta.' : `Sem conteúdo (${reason}).` },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ response: textContent })
   } catch (error: any) {
     console.error('OpenAI API error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
   }
 }

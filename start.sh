@@ -18,14 +18,14 @@ echo ""
 echo "✅ Dependências instaladas!"
 echo ""
 echo "🚀 Iniciando servidor WebSocket..."
-cd server && npm run dev &
+cd server && PORT=3001 npm run dev &
 SERVER_PID=$!
 
 # Esperar o servidor iniciar
 sleep 3
 
 echo "🚀 Iniciando frontend Next.js..."
-cd ..
+cd "$(dirname "$0")"
 npm run dev &
 FRONTEND_PID=$!
 

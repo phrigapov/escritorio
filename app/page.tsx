@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { io, type Socket } from 'socket.io-client'
 
 import { loadUser, saveUser, loadPrefs, type User } from '@/lib/prefs'
 
@@ -16,14 +17,14 @@ export default function Home() {
   const [user, setUser]             = useState<User | null>(null)
   const [headless, setHeadless]     = useState(false)
   const [error, setError]           = useState('')
+  const [locked, setLocked]         = useState(false) // escritório bloqueado
   const [simpleName, setSimpleName] = useState('')
   const [simpleEnabled, setSimpleEnabled] = useState(false)
-  const [ready, setReady]           = useState(false) // evita flash de login
-  const searchParams = useSearchParams()
-
-  // Contagem de espaços consecutivos para habilitar login por nome
+  const [ready, setReady]           = useState(false)
+  const [socket, setSocket]         = useState<Socket | null>(null)
   const [spaceCount, setSpaceCount] = useState(0)
   const [lastSpaceTime, setLastSpaceTime] = useState(0)
+  const searchParams = useSearchParams()
 
   // Ao montar, tenta restaurar sessão do localStorage
   useEffect(() => {
@@ -35,6 +36,32 @@ export default function Home() {
     }
     setReady(true)
   }, [])
+
+  // ── Socket único — criado no login, destruído no logout ─────────────────────
+  // Trocar de modo (Game ↔ HeadlessMode) é apenas UI — o socket não é recriado
+  useEffect(() => {
+    if (!user) { setSocket(null); return }
+
+    const url = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
+    const s = io(url, { timeout: 5000, reconnection: true, reconnectionDelay: 500 })
+
+    s.on('force-disconnect', (data: { reason: string }) => {
+      // Ignorar quando é o servidor limpando sessão antiga do mesmo usuário
+      if (data.reason === 'Nova sessão aberta') return
+      // Escritório bloqueado: redirecionar para tela de bloqueio
+      if (data.reason === 'office-locked') {
+        if (user?.username === 'phrigapov') return // admin nunca é bloqueado
+        setLocked(true); saveUser(null); setUser(null); return
+      }
+      // Outros casos (ex: admin kick futuro)
+      setError(`Desconectado: ${data.reason}`)
+      saveUser(null)
+      setUser(null)
+    })
+
+    setSocket(s)
+    return () => { s.disconnect(); setSocket(null) }
+  }, [user?.username]) // recria apenas se o usuário mudar
 
   // Processa callback do OAuth via URL params
   useEffect(() => {
@@ -77,20 +104,13 @@ export default function Home() {
 
   // Listener de teclado para triple-space na tela de login
   useEffect(() => {
-    if (user) return // já logado, não precisa
+    if (user) return
 
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key !== ' ') {
-        setSpaceCount(0)
-        return
-      }
+      if (e.key !== ' ') { setSpaceCount(0); return }
       const now = Date.now()
-      if (now - lastSpaceTime > 800) {
-        // Reset se demorou demais entre espaços
-        setSpaceCount(1)
-      } else {
-        setSpaceCount(prev => prev + 1)
-      }
+      if (now - lastSpaceTime > 800) setSpaceCount(1)
+      else setSpaceCount(prev => prev + 1)
       setLastSpaceTime(now)
     }
 
@@ -98,16 +118,17 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKey)
   }, [user, lastSpaceTime])
 
-  // Ativa login simples quando 3 espaços consecutivos
   useEffect(() => {
     if (spaceCount >= 3 && !simpleEnabled) {
       setSimpleEnabled(true)
       setSpaceCount(0)
+      setLocked(false) // triple-space também limpa tela de bloqueio
     }
   }, [spaceCount, simpleEnabled])
 
   const handleGitHubLogin = (headless = false) => {
     setError('')
+    setLocked(false)
     window.location.href = headless ? '/api/auth/github?headless=true' : '/api/auth/github'
   }
 
@@ -116,6 +137,7 @@ export default function Home() {
     const u: User = { username: simpleName.trim(), name: simpleName.trim(), loginType: 'simple' }
     setUser(u)
     saveUser(u)
+    setLocked(false)
   }, [simpleName])
 
   const handleLogout = () => {
@@ -123,10 +145,37 @@ export default function Home() {
     saveUser(null)
     setHeadless(false)
     setSimpleEnabled(false)
+    setLocked(false)
   }
 
-  // Evita flash de login enquanto verifica localStorage
   if (!ready) return null
+
+  // ── Tela de escritório bloqueado ─────────────────────────────────────────
+  if (locked) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <Card className="w-[90%] max-w-[460px] text-center">
+          <CardHeader>
+            <div className="text-6xl mb-2">🧹🪣</div>
+            <CardTitle className="text-xl">Opa! O escritório está fechado</CardTitle>
+            <CardDescription className="text-base mt-2">
+              Nossa dedicada equipe de faxina está <strong>varrendo, esfregando e perfumando</strong> cada cantinho do escritório.
+              <br /><br />
+              Por favor, volte mais tarde quando o cheiro de pinho sol já tiver ido embora. 🌿
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex flex-col gap-2 justify-center">
+            <p className="text-xs text-muted-foreground">
+              Se você trabalha aqui e sabe a senha secreta... você sabe o que fazer. 🤫
+            </p>
+            <Button variant="ghost" size="sm" onClick={() => { setLocked(false); setError('') }}>
+              Tentar novamente
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
 
   if (!user) {
     return (
@@ -142,39 +191,23 @@ export default function Home() {
               <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                 <div className="flex items-start justify-between gap-2">
                   <span>{error}</span>
-                  <button
-                    onClick={() => setError('')}
-                    className="shrink-0 text-destructive/70 hover:text-destructive"
-                  >
-                    x
-                  </button>
+                  <button onClick={() => setError('')} className="shrink-0 text-destructive/70 hover:text-destructive">x</button>
                 </div>
                 <div className="mt-3 border-t border-destructive/20 pt-3">
-                  <Button
-                    variant="destructive"
-                    className="w-full"
-                    onClick={() => handleGitHubLogin()}
-                  >
+                  <Button variant="destructive" className="w-full" onClick={() => handleGitHubLogin()}>
                     Tentar Novamente
                   </Button>
                 </div>
               </div>
             )}
 
-            {/* Login GitHub — método principal */}
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => handleGitHubLogin()}
-              className="w-full gap-2"
-            >
+            <Button size="lg" variant="outline" onClick={() => handleGitHubLogin()} className="w-full gap-2">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
               </svg>
               Entrar com GitHub
             </Button>
 
-            {/* Login simples — escondido, habilitado com triple-space */}
             {simpleEnabled && (
               <>
                 <div className="relative">
@@ -183,40 +216,29 @@ export default function Home() {
                     <span className="bg-card px-2 text-muted-foreground">ou entre com nome</span>
                   </div>
                 </div>
-
                 <div className="flex gap-2">
                   <Input
                     placeholder="Seu nome..."
                     value={simpleName}
                     onChange={e => setSimpleName(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') handleSimpleLogin()
-                    }}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSimpleLogin() }}
                     className="flex-1"
                     autoFocus
                   />
-                  <Button
-                    size="lg"
-                    disabled={!simpleName.trim()}
-                    onClick={handleSimpleLogin}
-                  >
-                    Entrar
-                  </Button>
+                  <Button size="lg" disabled={!simpleName.trim()} onClick={handleSimpleLogin}>Entrar</Button>
                 </div>
               </>
             )}
           </CardContent>
 
           <CardFooter className="justify-center">
-            <p className="text-xs text-muted-foreground">
-              Autentique-se via GitHub para continuar
-            </p>
+            <p className="text-xs text-muted-foreground">Autentique-se via GitHub para continuar</p>
           </CardFooter>
         </Card>
       </div>
     )
   }
 
-  if (headless) return <HeadlessMode user={user} onSwitchMode={() => setHeadless(false)} onLogout={handleLogout} />
-  return <Game user={user} onSwitchMode={() => setHeadless(true)} onLogout={handleLogout} />
+  if (headless) return <HeadlessMode user={user} socket={socket} onSwitchMode={() => setHeadless(false)} onLogout={handleLogout} />
+  return <Game user={user} socket={socket} onSwitchMode={() => setHeadless(true)} onLogout={handleLogout} />
 }
