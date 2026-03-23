@@ -131,12 +131,46 @@ export async function GET(
                 reactions { totalCount }
               }
             }
+            trackedInIssues(first: 5) {
+              nodes {
+                number title state url
+                repository { nameWithOwner }
+              }
+            }
+            trackedIssues(first: 50) {
+              totalCount
+              nodes {
+                number title state stateReason url
+                assignees(first: 3) { nodes { login avatarUrl } }
+                repository { nameWithOwner }
+              }
+            }
           }
         }
       }
     `
 
-    const data = await ghGraphQL(query, { owner: OWNER, repo: REPO, number: issueNumber })
+    // Query das definições de campos do projeto (para campos de data vazios) — em paralelo
+    const fieldDefsQuery = `
+      query($org: String!, $number: Int!) {
+        organization(login: $org) {
+          projectV2(number: $number) {
+            fields(first: 30) {
+              nodes {
+                __typename
+                ... on ProjectV2Field { id name dataType }
+              }
+            }
+          }
+        }
+      }
+    `
+
+    const [data, fieldDefsData] = await Promise.all([
+      ghGraphQL(query, { owner: OWNER, repo: REPO, number: issueNumber }),
+      ghGraphQL(fieldDefsQuery, { org: ORG, number: PROJECT_NUMBER }).catch(() => null),
+    ])
+
     const issue = data.repository?.issue
     if (!issue) {
       return NextResponse.json({ error: 'Issue nao encontrada' }, { status: 404 })
@@ -237,6 +271,18 @@ export async function GET(
       }
     }
 
+    // Adicionar campos de data vazios usando as definições já buscadas em paralelo
+    if (projectItem && fieldDefsData) {
+      const fieldDefs = fieldDefsData?.organization?.projectV2?.fields?.nodes || []
+      const existingIds = new Set(projectFields.map((f: ProjectField) => f.fieldId))
+      for (const def of fieldDefs) {
+        if (def.__typename !== 'ProjectV2Field') continue
+        if (def.dataType !== 'DATE') continue
+        if (existingIds.has(def.id)) continue
+        projectFields.push({ name: def.name, fieldId: def.id, type: 'date', value: null })
+      }
+    }
+
     // Branches vinculadas
     const linkedBranches = (issue.linkedBranches?.nodes || [])
       .map((b: any) => b.ref?.name)
@@ -304,6 +350,24 @@ export async function GET(
       projectTitle,
       projectFields,
       repoCollaborators,
+      // Issues relacionadas
+      trackedBy: (issue.trackedInIssues?.nodes || []).map((i: any) => ({
+        number: i.number,
+        title: i.title,
+        state: i.state,
+        url: i.url,
+        repo: i.repository?.nameWithOwner || '',
+      })),
+      subIssues: (issue.trackedIssues?.nodes || []).map((i: any) => ({
+        number: i.number,
+        title: i.title,
+        state: i.state,
+        stateReason: i.stateReason || null,
+        url: i.url,
+        repo: i.repository?.nameWithOwner || '',
+        assignees: (i.assignees?.nodes || []).map((a: any) => ({ login: a.login, avatarUrl: a.avatarUrl })),
+      })),
+      subIssueCount: issue.trackedIssues?.totalCount || 0,
     })
   } catch (err) {
     console.error('GitHub Issue Detail Error:', err)

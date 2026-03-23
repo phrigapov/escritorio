@@ -1,0 +1,2940 @@
+{
+  "months": [
+    {
+      "name": "Fevereiro",
+      "weeks": 4
+    },
+    {
+      "name": "Março",
+      "weeks": 4
+    },
+    {
+      "name": "Abril",
+      "weeks": 4
+    },
+    {
+      "name": "Maio",
+      "weeks": 4
+    },
+    {
+      "name": "Junho",
+      "weeks": 4
+    },
+    {
+      "name": "Julho",
+      "weeks": 4
+    },
+    {
+      "name": "Agosto",
+      "weeks": 4
+    },
+    {
+      "name": "Setembro",
+      "weeks": 4
+    },
+    {
+      "name": "Outubro",
+      "weeks": 4
+    },
+    {
+      "name": "Novembro",
+      "weeks": 4
+    },
+    {
+      "name": "Dezembro",
+      "weeks": 4
+    }
+  ],
+  "projects": [
+    {
+      "id": "backoffice",
+      "name": "Backoffice",
+      "phases": [
+        {
+          "id": "fase-1",
+          "name": "Fase 1",
+          "features": [
+            {
+              "id": "login",
+              "name": "Login",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 4,
+                  "responsible": "desenvolvimento",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian"
+                  ],
+                  "status": "planned"
+                }
+              ]
+            },
+            {
+              "id": "widgets",
+              "name": "Widgets",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "ferramentas",
+              "name": "Ferramentas",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "admin",
+              "name": "Admin",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fase-2",
+          "name": "Fase 2",
+          "features": [
+            {
+              "id": "qrcode",
+              "name": "Qrcode",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 1,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "materiais",
+              "name": "Materiais",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 1,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 4,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 1,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 2,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "eventos",
+              "name": "Eventos",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "faq",
+              "name": "FAQ",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fase-3",
+          "name": "Fase 3",
+          "features": [
+            {
+              "id": "gerenciador-de-escolas",
+              "name": "Gerenciador de Escolas",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 1,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 4,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 1,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 2,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 3,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "gerenciador-de-livros",
+              "name": "Gerenciador de Livros",
+              "weeks": [
+                {
+                  "month": "Março",
+                  "weekNumber": 3,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 4,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 1,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 2,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 3,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 4,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 1,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 2,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 3,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 4,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "banco-de-questoes",
+      "name": "Banco de Questões",
+      "phases": [
+        {
+          "id": "fase-1",
+          "name": "Fase 1",
+          "features": [
+            {
+              "id": "estudo-e-referencias",
+              "name": "Estudo e referências",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 1,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 4,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "design",
+              "name": "Design",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 1,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 4,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 1,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 2,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "desenvolvimento",
+              "name": "Desenvolvimento",
+              "weeks": [
+                {
+                  "month": "Março",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "cadastro-de-questoes",
+              "name": "Cadastro de Questões",
+              "weeks": [
+                {
+                  "month": "Junho",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 1,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 2,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 3,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 4,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 1,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 2,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 3,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 4,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 1,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 2,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 3,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 4,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fase-2",
+          "name": "Fase 2",
+          "features": []
+        },
+        {
+          "id": "fase-3",
+          "name": "Fase 3",
+          "features": []
+        }
+      ]
+    },
+    {
+      "id": "plataforma-maker",
+      "name": "Plataforma Maker",
+      "phases": [
+        {
+          "id": "fase-1",
+          "name": "Fase 1",
+          "features": [
+            {
+              "id": "estudo-e-referencias",
+              "name": "Estudo e referências",
+              "weeks": [
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 1,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 2,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 3,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Fevereiro",
+                  "weekNumber": 4,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 1,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 2,
+                  "responsible": "administrativo",
+                  "category": "te",
+                  "status": "planned"
+                }
+              ]
+            },
+            {
+              "id": "design",
+              "name": "Design",
+              "weeks": [
+                {
+                  "month": "Março",
+                  "weekNumber": 3,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Março",
+                  "weekNumber": 4,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 1,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 2,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 3,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 4,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "desenvolvimento",
+              "name": "Desenvolvimento",
+              "weeks": [
+                {
+                  "month": "Maio",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fase-2",
+          "name": "Fase 2",
+          "features": []
+        },
+        {
+          "id": "fase-3",
+          "name": "Fase 3",
+          "features": []
+        }
+      ]
+    },
+    {
+      "id": "gestor-3-1",
+      "name": "Gestor 3.1",
+      "phases": [
+        {
+          "id": "fase-1",
+          "name": "Fase 1",
+          "features": [
+            {
+              "id": "resgate-de-problemas",
+              "name": "Resgate de Problemas",
+              "weeks": [
+                {
+                  "month": "Abril",
+                  "weekNumber": 1,
+                  "responsible": "te",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 2,
+                  "responsible": "te",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 3,
+                  "responsible": "te",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 4,
+                  "responsible": "te",
+                  "category": "te",
+                  "status": "planned"
+                }
+              ]
+            },
+            {
+              "id": "estudos-e-referencias",
+              "name": "Estudos e referências",
+              "weeks": [
+                {
+                  "month": "Abril",
+                  "weekNumber": 1,
+                  "responsible": "te",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 2,
+                  "responsible": "te",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 3,
+                  "responsible": "te",
+                  "category": "te",
+                  "status": "planned"
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 4,
+                  "responsible": "te",
+                  "category": "te",
+                  "status": "planned"
+                }
+              ]
+            },
+            {
+              "id": "design",
+              "name": "Design",
+              "weeks": [
+                {
+                  "month": "Maio",
+                  "weekNumber": 1,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 2,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 3,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 4,
+                  "responsible": "Jonatas",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "joe"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "desenvolvimento",
+              "name": "Desenvolvimento",
+              "weeks": [
+                {
+                  "month": "Junho",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fase-2",
+          "name": "Fase 2",
+          "features": []
+        },
+        {
+          "id": "fase-3",
+          "name": "Fase 3",
+          "features": []
+        }
+      ]
+    },
+    {
+      "id": "e-learning",
+      "name": "E-Learning",
+      "phases": [
+        {
+          "id": "fase-1",
+          "name": "Fase 1",
+          "features": [
+            {
+              "id": "estudos-e-referencias",
+              "name": "Estudos e referências",
+              "weeks": [
+                {
+                  "month": "Maio",
+                  "weekNumber": 2,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 3,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 4,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 1,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 2,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 3,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Junho",
+                  "weekNumber": 4,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 1,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 2,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 3,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Julho",
+                  "weekNumber": 4,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 1,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 2,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 3,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 4,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 1,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 2,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 3,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 4,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 1,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 2,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 3,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 4,
+                  "responsible": "guga",
+                  "status": "planned",
+                  "category": "design",
+                  "people": [
+                    "guga"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "design",
+              "name": "Design",
+              "weeks": []
+            },
+            {
+              "id": "desenvolvimento",
+              "name": "Desenvolvimento",
+              "weeks": [
+                {
+                  "month": "Agosto",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Agosto",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "framework",
+              "name": "Framework",
+              "weeks": [
+                {
+                  "month": "Setembro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fase-2",
+          "name": "Fase 2",
+          "features": [
+            {
+              "id": "aplicativo-livro-digital",
+              "name": "Aplicativo Livro Digital",
+              "weeks": [
+                {
+                  "month": "Setembro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Setembro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Outubro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 1,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 2,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 3,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                },
+                {
+                  "month": "Novembro",
+                  "weekNumber": 4,
+                  "responsible": "dev",
+                  "status": "planned",
+                  "category": "desenvolvimento",
+                  "people": [
+                    "ian",
+                    "gui"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fase-3",
+          "name": "Fase 3",
+          "features": []
+        }
+      ]
+    },
+    {
+      "id": "infrastructure",
+      "name": "Infraestrutura",
+      "phases": [
+        {
+          "id": "infra-tasks",
+          "name": "Tarefas de Infraestrutura",
+          "features": [
+            {
+              "id": "infra-task-0",
+              "name": "Mudança do docker swarm para kubernets",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-1",
+              "name": "Instâncias mais potêntes de banco de dados",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-2",
+              "name": "Criação de balanceamento de maquinas ec2 e não somente de containers",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-3",
+              "name": "Multicloud para redundancia",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-4",
+              "name": "Atualização do docker swarm",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-5",
+              "name": "Atualização do RDS (Instâncias)",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-6",
+              "name": "Atualização das Ec2 Amazon Linux",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-7",
+              "name": "Atualizações dos pacotes de sofware como Next e Node",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-8",
+              "name": "Contratação e migração para kong corporativo",
+              "weeks": [
+                {
+                  "month": "Abril",
+                  "weekNumber": 1,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 2,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 3,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                },
+                {
+                  "month": "Abril",
+                  "weekNumber": 4,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                }
+              ]
+            },
+            {
+              "id": "infra-task-9",
+              "name": "Reconstruir Docker swarm de Desenvolvimento (Esta com sérios problemas)",
+              "weeks": [
+                {
+                  "month": "Maio",
+                  "weekNumber": 1,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 2,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                }
+              ]
+            },
+            {
+              "id": "infra-task-10",
+              "name": "Implementar metodologia de hibernação de containers",
+              "weeks": [
+                {
+                  "month": "Maio",
+                  "weekNumber": 1,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 2,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                }
+              ]
+            },
+            {
+              "id": "infra-task-11",
+              "name": "Atualização e melhoria de Runners",
+              "weeks": [
+                {
+                  "month": "Maio",
+                  "weekNumber": 3,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 4,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                }
+              ]
+            },
+            {
+              "id": "infra-task-12",
+              "name": "Atualização e melhorias de Actions/builds/compilações",
+              "weeks": [
+                {
+                  "month": "Maio",
+                  "weekNumber": 3,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                },
+                {
+                  "month": "Maio",
+                  "weekNumber": 4,
+                  "responsible": "infra",
+                  "category": "infra",
+                  "people": [
+                    "paulo"
+                  ],
+                  "status": "planned"
+                }
+              ]
+            },
+            {
+              "id": "infra-task-13",
+              "name": "Atualização e melhorias de github/processos/automações",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-14",
+              "name": "Implementação e manutenção de observabilidade mais complexa",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-15",
+              "name": "Implementação e ajustes de e-mails/servidor/Lógica",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-16",
+              "name": "Manutenção de e-mails",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-17",
+              "name": "Implementação e migração de serviços restantes par GO (Livro Digital)",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-18",
+              "name": "Finalização da migração do identity-v2 e retirada total do identity",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-19",
+              "name": "Implementação de testes robustos e2e, componentes, unitários e integração",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-20",
+              "name": "Implementação completa do backstage para documentação, análise, testes e recursos",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-21",
+              "name": "Implementação e criação das bibliotecas de UI, storybook, package managers e NPM",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-22",
+              "name": "Implementação e migração dos livros digitais, retirar ftp, migrar imagens e conteudo para data-ms",
+              "weeks": []
+            },
+            {
+              "id": "infra-task-23",
+              "name": "Migração, implementação do sme-icons e refatoração dos projetos",
+              "weeks": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

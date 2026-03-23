@@ -24,6 +24,9 @@ interface ToolbarProps {
   githubOpen?: boolean
   onToggleGithub?: () => void
 
+  gestaoOpen?: boolean
+  onToggleGestao?: () => void
+
   editorOpen?: boolean
   onOpenEditor?: () => void
   onCloseEditor?: () => void
@@ -45,6 +48,8 @@ export default function Toolbar({
   onToggleClaude,
   githubOpen = false,
   onToggleGithub,
+  gestaoOpen = false,
+  onToggleGestao,
   editorOpen = false,
   onOpenEditor,
   onCloseEditor,
@@ -95,13 +100,23 @@ export default function Toolbar({
           </Button>
         )}
 
+        {onToggleGestao && (
+          <Button
+            variant={gestaoOpen ? 'secondary' : 'ghost'}
+            size="xs"
+            onClick={onToggleGestao}
+          >
+            Gestão (4)
+          </Button>
+        )}
+
         {mode === 'game' && onOpenEditor && onCloseEditor && (
           <Button
             variant={editorOpen ? 'destructive' : 'ghost'}
             size="xs"
             onClick={editorOpen ? onCloseEditor : onOpenEditor}
           >
-            {editorOpen ? 'Fechar Editor' : 'Editor (4)'}
+            {editorOpen ? 'Fechar Editor' : 'Editor (5)'}
           </Button>
         )}
 

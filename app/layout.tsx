@@ -3,8 +3,9 @@ import Script from 'next/script'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Escritório Virtual Multiplayer',
+  title: 'Escritório',
   description: 'Plataforma de escritório 2D online com chat em tempo real',
+  icons: { icon: '/favicon.svg' },
 }
 
 export default function RootLayout({

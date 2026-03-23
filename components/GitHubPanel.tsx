@@ -42,12 +42,13 @@ interface GHMention {
 interface GHTeamIssue {
   number: number; title: string; url: string; repo: string
   assignees: { login: string; avatarUrl: string }[]
-  endDate: string
+  labels: { name: string; color: string }[]
+  status: string; endDate: string; startDate: string
 }
 interface GHData {
   repo: GHRepo; issues: GHIssue[]; backlog: GHIssue[]; sprint: GHIssue[]
   test: GHIssue[]; pulls: GHPull[]; commits: GHCommit[]; reviewCount: number
-  mentions: GHMention[]; teamSprint: GHTeamIssue[]
+  mentions: GHMention[]
 }
 
 type Tab = 'overview' | 'mentions' | 'team' | 'test' | 'pulls' | 'commits'
@@ -264,11 +265,17 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
   const [selectedIssue, setSelectedIssue] = useState<number | null>(null)
   const [dualKanban, setDualKanban] = useState(false)
 
+  // Team sprint — carregado separadamente (lazy) para não bloquear o painel principal
+  const [teamSprint, setTeamSprint] = useState<GHTeamIssue[]>([])
+  const [teamLoading, setTeamLoading] = useState(false)
+  const teamFetchedAtRef = useRef<number>(0)
+
   // Local lists for optimistic drag-and-drop updates
   const [localBacklog, setLocalBacklog] = useState<GHIssue[]>([])
   const [localSprint, setLocalSprint] = useState<GHIssue[]>([])
   const [movingIssue, setMovingIssue] = useState<number | null>(null)
   const [overviewFilter, setOverviewFilter] = useState<'sprint' | 'backlog' | 'test' | null>('sprint')
+  const [teamFilter, setTeamFilter] = useState<'all' | 'overdue' | 'ontrack' | 'nodue'>('overdue')
 
   // Unread mentions tracking
   const [unreadMentions, setUnreadMentions] = useState(false)
@@ -351,7 +358,92 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
     }
   }, [fetchData])
 
+  const fetchTeamSprint = useCallback(async (force = false) => {
+    const age = Date.now() - teamFetchedAtRef.current
+    if (!force && age < 60_000) return // já fresco (< 60s)
+    setTeamLoading(true)
+    try {
+      const url = force ? '/api/github/team?nocache=1' : '/api/github/team'
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      if (json.teamSprint) {
+        setTeamSprint(json.teamSprint)
+        teamFetchedAtRef.current = Date.now()
+      }
+    } catch { /* silently ignore */ } finally {
+      setTeamLoading(false)
+    }
+  }, [])
+
+  // Prefetch team sprint em background assim que o painel abre
+  useEffect(() => { fetchTeamSprint() }, [fetchTeamSprint])
+
   const openUrl = (url: string) => window.open(url, '_blank', 'noopener,noreferrer')
+
+  // ── Favicon badge com contagem de PRs ───────────────────────────────────────
+  useEffect(() => {
+    const count = data?.reviewCount ?? 0
+    const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]') ||
+      (() => {
+        const el = document.createElement('link')
+        el.rel = 'icon'
+        document.head.appendChild(el)
+        return el
+      })()
+
+    if (count === 0) {
+      link.href = '/favicon.ico'
+      document.title = document.title.replace(/^\(\d+\)\s*/, '')
+      return
+    }
+
+    // Desenha favicon com badge
+    const canvas = document.createElement('canvas')
+    canvas.width = 32; canvas.height = 32
+    const ctx = canvas.getContext('2d')!
+
+    const img = new Image()
+    img.src = '/favicon.ico'
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, 32, 32)
+      // Badge vermelho
+      const r = 9
+      ctx.beginPath()
+      ctx.arc(32 - r, r, r, 0, 2 * Math.PI)
+      ctx.fillStyle = '#ef4444'
+      ctx.fill()
+      // Número
+      ctx.fillStyle = '#fff'
+      ctx.font = 'bold 11px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(count > 9 ? '9+' : String(count), 32 - r, r)
+      link.href = canvas.toDataURL()
+    }
+    img.onerror = () => {
+      // Sem favicon original — badge simples
+      ctx.fillStyle = '#ef4444'
+      ctx.beginPath()
+      ctx.arc(16, 16, 16, 0, 2 * Math.PI)
+      ctx.fill()
+      ctx.fillStyle = '#fff'
+      ctx.font = 'bold 14px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(count > 9 ? '9+' : String(count), 16, 16)
+      link.href = canvas.toDataURL()
+    }
+
+    // Título da aba
+    document.title = document.title.replace(/^\(\d+\)\s*/, '')
+    document.title = `(${count}) ${document.title}`
+
+    return () => {
+      link.href = '/favicon.ico'
+      document.title = document.title.replace(/^\(\d+\)\s*/, '')
+    }
+  }, [data?.reviewCount])
 
   // ── Track unread mentions ────────────────────────────────────────────────────
   useEffect(() => {
@@ -366,6 +458,7 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
   const handleTabChange = (v: string) => {
     const t = v as Tab
     setTab(t)
+    if (t === 'team') fetchTeamSprint()
     if (t === 'mentions' && data?.mentions?.length) {
       setUnreadMentions(false)
       const key = `${data.mentions[0].repo}#${data.mentions[0].number}`
@@ -621,28 +714,19 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
                               ))}
                             </div>
 
-                            {/* PRs aguardando revisão */}
-                            {data.reviewCount > 0 && (
-                              <Card size="sm"
-                                className="rounded-lg p-3 mb-2 flex items-center gap-3 cursor-pointer hover:bg-accent transition-colors border-amber-500/60"
-                                onClick={() => setTab('pulls')}>
-                                <div className="size-8 rounded-full flex items-center justify-center shrink-0 bg-amber-500/10 text-amber-500">
-                                  <GitPullRequest className="size-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-foreground">{data.reviewCount}</p>
-                                  <p className="text-xs text-muted-foreground">PR{data.reviewCount !== 1 ? 's' : ''} aguardando sua revisão</p>
-                                </div>
-                                <Badge className="bg-amber-500 text-white border-0 shrink-0">{data.reviewCount}</Badge>
-                              </Card>
-                            )}
-
                             {/* PRs do usuário — destaque acima das issues */}
                             {data.pulls.length > 0 && (
                               <div className="mb-1">
-                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 mt-3">
-                                  Pull Requests ({data.pulls.length})
-                                </p>
+                                <div className="flex items-center gap-1.5 mb-1.5 mt-3">
+                                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    Pull Requests ({data.pulls.length})
+                                  </p>
+                                  {data.reviewCount > 0 && (
+                                    <span className="inline-flex items-center justify-center size-4 rounded-full bg-red-500 text-white text-[9px] font-bold shrink-0">
+                                      {data.reviewCount}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="space-y-1">
                                   {data.pulls.map(p => (
                                     <div key={`${p.repo}-${p.number}`}
@@ -728,38 +812,138 @@ export default function GitHubPanel({ onClose, defaultUsername }: { onClose: () 
 
                 {/* Team Sprint */}
                 <TabsContent value="team">
-                  {!data.teamSprint?.length
+                  {teamLoading
+                    ? <EmptyState icon={<RefreshCw className="size-6 animate-spin text-muted-foreground" />} text="Carregando sprint da equipe..." />
+                    : !teamSprint.length
                     ? <EmptyState icon={<Users className="size-6 text-muted-foreground" />} text="Nenhuma issue na sprint" />
-                    : <>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 mt-1">Sprint da Equipe</p>
-                        <div className="space-y-0.5">
-                          {data.teamSprint.map(i => {
-                            const heat = heatLevel(i.endDate)
-                            return (
-                              <div key={i.number}
-                                onClick={() => setSelectedIssue(i.number)}
-                                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer transition-colors group">
-                                {/* Assignee avatar(s) */}
-                                <div className="flex -space-x-1 shrink-0">
-                                  {i.assignees.slice(0, 2).map(a => (
-                                    <img key={a.login} src={a.avatarUrl} alt={a.login} title={a.login}
-                                      className="size-5 rounded-full ring-1 ring-background" />
-                                  ))}
-                                  {i.assignees.length === 0 && (
-                                    <div className="size-5 rounded-full bg-muted ring-1 ring-background flex items-center justify-center">
-                                      <Users className="size-2.5 text-muted-foreground" />
+                    : (() => {
+                        const byDate = (a: GHTeamIssue, b: GHTeamIssue) =>
+                          new Date(a.endDate || '9999').getTime() - new Date(b.endDate || '9999').getTime()
+
+                        const overdue = teamSprint
+                          .filter(i => i.endDate && isOverdue(i.endDate))
+                          .sort(byDate)
+                        const onTrack = teamSprint
+                          .filter(i => i.endDate && !isOverdue(i.endDate))
+                          .sort(byDate)
+                        const noDue   = teamSprint.filter(i => !i.endDate)
+                        const all     = [...overdue, ...onTrack, ...noDue]
+
+                        const PILLS = [
+                          { key: 'overdue' as const, label: 'Atrasadas', count: overdue.length, active: 'bg-destructive/15 border-destructive/50 text-destructive', dot: 'bg-destructive' },
+                          { key: 'ontrack' as const, label: 'No prazo',  count: onTrack.length, active: 'bg-green-500/15 border-green-500/50 text-green-400',       dot: 'bg-green-500' },
+                          { key: 'nodue'   as const, label: 'Sem prazo', count: noDue.length,   active: 'bg-accent border-border text-foreground',                   dot: 'bg-muted-foreground/40' },
+                        ] as const
+
+                        const listMap = { all, overdue, ontrack: onTrack, nodue: noDue }
+                        const visible = listMap[teamFilter]
+
+                        const renderTeamCard = (i: GHTeamIssue) => {
+                          const heat = heatLevel(i.endDate)
+                          const late = !!(i.endDate && isOverdue(i.endDate))
+                          return (
+                            <Card key={i.number} size="sm"
+                              onClick={() => setSelectedIssue(i.number)}
+                              className={`px-3 py-2.5 mb-2 cursor-pointer transition-colors hover:bg-accent gap-1.5
+                                ${late ? 'border-destructive/40 bg-destructive/5' : ''}`}>
+                              <div className="flex items-start gap-2">
+                                {/* Assignees */}
+                                <div className="flex -space-x-1.5 shrink-0 mt-0.5">
+                                  {i.assignees.length === 0
+                                    ? <div className="size-6 rounded-full bg-muted ring-1 ring-background flex items-center justify-center">
+                                        <Users className="size-3 text-muted-foreground" />
+                                      </div>
+                                    : i.assignees.slice(0, 4).map(a => (
+                                        <img key={a.login} src={a.avatarUrl} alt={a.login} title={a.login}
+                                          className="size-6 rounded-full ring-1 ring-background" />
+                                      ))
+                                  }
+                                  {i.assignees.length > 4 && (
+                                    <div className="size-6 rounded-full bg-muted ring-1 ring-background flex items-center justify-center text-[9px] font-bold text-muted-foreground">
+                                      +{i.assignees.length - 4}
                                     </div>
                                   )}
                                 </div>
-                                {/* Title */}
-                                <p className="flex-1 min-w-0 text-xs text-foreground truncate">{i.title}</p>
-                                {/* Heat indicator */}
-                                <span className={`text-[10px] font-medium shrink-0 ${heat.color}`}>{heat.label}</span>
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start gap-1">
+                                    {late && <AlertTriangle className="size-3 text-destructive shrink-0 mt-0.5" />}
+                                    <p className="text-xs font-medium leading-snug text-card-foreground line-clamp-2">
+                                      #{i.number} {i.title}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{i.repo.split('/')[1] || i.repo}</Badge>
+                                    {i.assignees.length > 0 && (
+                                      <span className="text-[10px] text-muted-foreground">{i.assignees.map(a => a.login).join(', ')}</span>
+                                    )}
+                                  </div>
+                                  {i.labels.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {i.labels.slice(0, 3).map(l => <LabelBadge key={l.name} {...l} />)}
+                                    </div>
+                                  )}
+                                </div>
+                                {/* Deadline */}
+                                <div className="shrink-0 text-right">
+                                  {i.endDate
+                                    ? <>
+                                        <span className={`text-[11px] font-semibold block ${heat.color}`}>{heat.label}</span>
+                                        <span className="text-[10px] text-muted-foreground block">
+                                          {new Date(i.endDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                        </span>
+                                      </>
+                                    : <span className="text-[10px] text-muted-foreground">—</span>
+                                  }
+                                </div>
                               </div>
-                            )
-                          })}
-                        </div>
-                      </>
+                            </Card>
+                          )
+                        }
+
+                        return (
+                          <>
+                            {/* Filter pills */}
+                            <div className="flex items-center gap-1.5 mb-3 mt-1">
+                              {/* X para limpar filtro — só aparece quando um filtro está ativo */}
+                              {teamFilter !== 'all' && (
+                                <button
+                                  onClick={() => setTeamFilter('all')}
+                                  title="Ver todas"
+                                  className="size-6 flex items-center justify-center rounded-full border border-border bg-muted text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
+                                >
+                                  <X className="size-3" />
+                                </button>
+                              )}
+                              {PILLS.map(p => (
+                                p.count === 0 ? null :
+                                <button
+                                  key={p.key}
+                                  onClick={() => setTeamFilter(teamFilter === p.key ? 'all' : p.key)}
+                                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors whitespace-nowrap
+                                    ${teamFilter === p.key
+                                      ? p.active
+                                      : 'bg-transparent border-border text-muted-foreground hover:bg-accent hover:text-foreground'
+                                    }`}
+                                >
+                                  <span className={`size-1.5 rounded-full shrink-0 ${p.dot}`} />
+                                  {p.label}
+                                  <span className={`rounded-full px-1 text-[10px] font-bold
+                                    ${teamFilter === p.key ? 'bg-foreground/10' : 'bg-muted'}`}>
+                                    {p.count}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Issue list */}
+                            {visible.length === 0
+                              ? <EmptyState icon={<Users className="size-5 text-muted-foreground" />} text="Nenhuma issue nesta categoria" />
+                              : visible.map(renderTeamCard)
+                            }
+                          </>
+                        )
+                      })()
                   }
                 </TabsContent>
 

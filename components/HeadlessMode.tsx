@@ -5,6 +5,7 @@ import type { Socket } from 'socket.io-client'
 import Toolbar from './Toolbar'
 import GitHubPanel from './GitHubPanel'
 import SettingsPanel from './SettingsPanel'
+import GestaoPanel from './GestaoPanel'
 import ChatPanel from './ChatPanel'
 import ClaudePanel from './ClaudePanel'
 
@@ -23,6 +24,7 @@ export default function HeadlessMode({ user, socket, onSwitchMode, onLogout }: {
   const [claudeOpen, setClaudeOpen] = useState(false)
   const [githubOpen, setGithubOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [gestaoOpen, setGestaoOpen] = useState(false)
 
   const displayName = user.name || user.username
 
@@ -53,6 +55,7 @@ export default function HeadlessMode({ user, socket, onSwitchMode, onLogout }: {
       if (e.key === '1') setChatOpen(o => !o)
       if (e.key === '2') setClaudeOpen(o => !o)
       if (e.key === '3') setGithubOpen(o => !o)
+      if (e.key === '4') setGestaoOpen(o => !o)
       if (e.key === 'Escape') setSettingsOpen(o => !o)
     }
     window.addEventListener('keydown', onKey)
@@ -72,6 +75,8 @@ export default function HeadlessMode({ user, socket, onSwitchMode, onLogout }: {
         onToggleClaude={user.username === 'phrigapov' ? () => setClaudeOpen(o => !o) : undefined}
         githubOpen={githubOpen}
         onToggleGithub={() => setGithubOpen(o => !o)}
+        gestaoOpen={gestaoOpen}
+        onToggleGestao={() => setGestaoOpen(o => !o)}
         settingsOpen={settingsOpen}
         onToggleSettings={() => setSettingsOpen(o => !o)}
       />
@@ -106,6 +111,11 @@ export default function HeadlessMode({ user, socket, onSwitchMode, onLogout }: {
             onClose={() => setGithubOpen(false)}
             defaultUsername={user.username}
           />
+        )}
+
+        {/* Painel de Gestao — tela cheia */}
+        {gestaoOpen && (
+          <GestaoPanel onClose={() => setGestaoOpen(false)} />
         )}
 
         {/* Settings Panel */}

@@ -25,6 +25,11 @@ interface ProjectField {
 }
 interface RepoLabel { name: string; color: string; description: string }
 interface Collaborator { login: string; avatarUrl: string }
+interface RelatedIssue {
+  number: number; title: string; state: string; stateReason?: string | null
+  url: string; repo: string
+  assignees?: { login: string; avatarUrl: string }[]
+}
 interface IssueDetail {
   id: string; number: number; title: string; body: string; bodyHTML: string
   state: string; stateReason: string | null; createdAt: string; updatedAt: string
@@ -40,6 +45,9 @@ interface IssueDetail {
   comments: IssueComment[]
   commentCount: number
   projectItemId: string | null; projectTitle: string | null; projectFields: ProjectField[]
+  trackedBy: RelatedIssue[]
+  subIssues: RelatedIssue[]
+  subIssueCount: number
 }
 interface IssueComment {
   id: string; body: string; bodyHTML: string; createdAt: string; updatedAt: string
@@ -284,6 +292,62 @@ function ProjectFieldEditor({ field, projectItemId, onUpdate, saving }: {
   )
 }
 
+// ── Inline date picker ───────────────────────────────────────────────────────
+function InlineDatePicker({ value, disabled, onSave }: {
+  value: string; disabled: boolean; onSave: (val: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState(value)
+
+  // sync external value changes (after refetch)
+  useEffect(() => { setEditValue(value) }, [value])
+
+  const save = (val: string) => {
+    onSave(val)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <Input
+          type="date"
+          value={editValue}
+          onChange={e => setEditValue(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') save(editValue)
+            if (e.key === 'Escape') setEditing(false)
+          }}
+          className="h-7 text-xs flex-1"
+          autoFocus
+        />
+        <Button variant="ghost" size="icon-xs" onClick={() => save(editValue)} disabled={disabled}>
+          <Check className="size-3" />
+        </Button>
+        <Button variant="ghost" size="icon-xs" onClick={() => setEditing(false)}>
+          <X className="size-3" />
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => { setEditValue(value); setEditing(true) }}
+      disabled={disabled}
+      className="group flex items-center gap-1.5 w-full text-left hover:bg-accent/50 rounded px-1.5 py-1 transition-colors"
+    >
+      <Calendar className="size-3 text-muted-foreground shrink-0" />
+      {value ? (
+        <span className="text-xs text-foreground flex-1">{formatDate(value)}</span>
+      ) : (
+        <span className="text-xs text-muted-foreground italic flex-1">Não definida</span>
+      )}
+      <Pencil className="size-2.5 opacity-0 group-hover:opacity-100 text-muted-foreground shrink-0" />
+    </button>
+  )
+}
+
 function fieldIcon(type: string): React.ElementType {
   switch (type) {
     case 'single_select': return ListChecks
@@ -294,8 +358,28 @@ function fieldIcon(type: string): React.ElementType {
   }
 }
 
+// ── Sub-issue state icon ──────────────────────────────────────────────────────
+function IssueStateIcon({ state, stateReason }: { state: string; stateReason?: string | null }) {
+  if (state === 'OPEN') return <CircleDot className="size-3.5 text-green-500 shrink-0" />
+  if (stateReason === 'NOT_PLANNED') return <CircleDot className="size-3.5 text-muted-foreground shrink-0" />
+  return <CheckCircle2 className="size-3.5 text-purple-500 shrink-0" />
+}
+
 // ── Componente principal ─────────────────────────────────────────────────────
-export default function IssueDetailView({ issueNumber, onBack }: { issueNumber: number; onBack: () => void }) {
+export default function IssueDetailView({ issueNumber: initialNumber, onBack }: { issueNumber: number; onBack: () => void }) {
+  // Pilha de navegação — permite navegar para sub-issues e voltar
+  const [navStack, setNavStack] = useState<number[]>([initialNumber])
+  const issueNumber = navStack[navStack.length - 1]
+
+  const navigate = (n: number) => setNavStack(prev => [...prev, n])
+  const goBack = () => {
+    if (navStack.length > 1) {
+      setNavStack(prev => prev.slice(0, -1))
+    } else {
+      onBack()
+    }
+  }
+
   const [issue, setIssue] = useState<IssueDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -320,7 +404,7 @@ export default function IssueDetailView({ issueNumber, onBack }: { issueNumber: 
     finally { setLoading(false) }
   }, [issueNumber])
 
-  useEffect(() => { fetchIssue() }, [fetchIssue])
+  useEffect(() => { setIssue(null); fetchIssue() }, [fetchIssue])
 
   const patchIssue = useCallback(async (payload: Record<string, unknown>) => {
     setSaving(true); setSaveMessage(null)
@@ -361,8 +445,20 @@ export default function IssueDetailView({ issueNumber, onBack }: { issueNumber: 
 
       {/* ── Top bar ── */}
       <div className="shrink-0 border-b border-border px-3 py-2 flex items-center gap-2">
-        <Button variant="ghost" size="icon-sm" onClick={onBack}><ArrowLeft className="size-4" /></Button>
-        <span className="text-xs text-muted-foreground font-mono flex-1">#{issueNumber}</span>
+        <Button variant="ghost" size="icon-sm" onClick={goBack}><ArrowLeft className="size-4" /></Button>
+        {/* Breadcrumb de navegação */}
+        <div className="flex items-center gap-1 flex-1 min-w-0 overflow-hidden">
+          {navStack.length > 1 && navStack.slice(0, -1).map((n, i) => (
+            <span key={n} className="flex items-center gap-1 shrink-0">
+              <button onClick={() => setNavStack(prev => prev.slice(0, i + 1))}
+                className="text-[10px] text-muted-foreground hover:text-foreground font-mono">
+                #{n}
+              </button>
+              <span className="text-muted-foreground/50 text-[10px]">/</span>
+            </span>
+          ))}
+          <span className="text-xs text-muted-foreground font-mono">#{issueNumber}</span>
+        </div>
         {saving && <span className="text-[10px] text-muted-foreground animate-pulse">Salvando...</span>}
         {saveMessage && (
           <span className={`text-[10px] ${saveMessage.startsWith('Erro') ? 'text-destructive' : 'text-green-500'}`}>{saveMessage}</span>
@@ -464,6 +560,49 @@ export default function IssueDetailView({ issueNumber, onBack }: { issueNumber: 
                   </div>
                 </div>
 
+                {/* Sub-issues */}
+                {issue.subIssues.length > 0 && (
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    <div className="flex items-center gap-2 bg-muted/30 border-b border-border px-3 py-2">
+                      <span className="text-xs font-semibold text-foreground flex-1">
+                        Sub-issues
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {issue.subIssues.filter(i => i.state === 'CLOSED').length}/{issue.subIssueCount} concluídas
+                      </span>
+                    </div>
+                    {/* Progress bar */}
+                    {issue.subIssueCount > 0 && (
+                      <div className="h-1 bg-muted">
+                        <div
+                          className="h-full bg-green-500 transition-all"
+                          style={{ width: `${(issue.subIssues.filter(i => i.state === 'CLOSED').length / issue.subIssueCount) * 100}%` }}
+                        />
+                      </div>
+                    )}
+                    <div className="divide-y divide-border/50">
+                      {issue.subIssues.map(sub => (
+                        <button key={sub.number} onClick={() => navigate(sub.number)}
+                          className="flex items-center gap-2 w-full px-3 py-2 hover:bg-accent transition-colors text-left group">
+                          <IssueStateIcon state={sub.state} stateReason={sub.stateReason} />
+                          <span className={`flex-1 min-w-0 text-xs truncate ${sub.state === 'CLOSED' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                            {sub.title}
+                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {sub.assignees?.slice(0, 2).map(a => (
+                              <img key={a.login} src={a.avatarUrl} alt={a.login} title={a.login}
+                                className="size-4 rounded-full ring-1 ring-border" />
+                            ))}
+                            <span className="text-[10px] text-muted-foreground font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                              #{sub.number}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Comments */}
                 {issue.comments.map(comment => (
                   <div key={comment.id} className="border border-border rounded-lg overflow-hidden">
@@ -511,6 +650,23 @@ export default function IssueDetailView({ issueNumber, onBack }: { issueNumber: 
               {/* ── Sidebar ── */}
               <div className="w-[190px] shrink-0 text-xs space-y-0">
 
+                {/* Rastreado por (parent issues) */}
+                {issue.trackedBy.length > 0 && (
+                  <SidebarSection title="Rastreado por">
+                    <div className="space-y-1">
+                      {issue.trackedBy.map(p => (
+                        <button key={p.number} onClick={() => navigate(p.number)}
+                          className="flex items-center gap-1.5 w-full text-left hover:text-foreground transition-colors group">
+                          <IssueStateIcon state={p.state} />
+                          <span className="text-xs text-foreground flex-1 min-w-0 truncate hover:underline">
+                            #{p.number} {p.title}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </SidebarSection>
+                )}
+
                 {/* Assignees */}
                 <SidebarSection title="Assignees" action={
                   <AssigneePicker
@@ -553,11 +709,33 @@ export default function IssueDetailView({ issueNumber, onBack }: { issueNumber: 
                   )}
                 </SidebarSection>
 
+                {/* Datas — campos de data do projeto em destaque */}
+                {(() => {
+                  const dateFields = issue.projectFields.filter(f => f.type === 'date')
+                  if (dateFields.length === 0 || !issue.projectItemId) return null
+                  return (
+                    <SidebarSection title="Datas">
+                      <div className="space-y-2">
+                        {dateFields.map(field => (
+                          <div key={field.fieldId}>
+                            <p className="text-[10px] text-muted-foreground mb-1">{field.name}</p>
+                            <InlineDatePicker
+                              value={field.value ? String(field.value) : ''}
+                              disabled={saving}
+                              onSave={val => patchIssue({ projectItemId: issue.projectItemId, projectField: { fieldId: field.fieldId, type: 'date', value: val } })}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </SidebarSection>
+                  )
+                })()}
+
                 {/* Projects */}
-                {issue.projectFields.length > 0 && (
+                {issue.projectFields.filter(f => f.type !== 'date').length > 0 && (
                   <SidebarSection title={issue.projectTitle || 'Projeto'}>
                     <div className="space-y-2">
-                      {issue.projectFields.map(field => (
+                      {issue.projectFields.filter(f => f.type !== 'date').map(field => (
                         <div key={field.fieldId}>
                           <p className="text-[10px] text-muted-foreground mb-0.5">{field.name}</p>
                           {issue.projectItemId ? (

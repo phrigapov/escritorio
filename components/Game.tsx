@@ -7,6 +7,7 @@ import Toolbar from './Toolbar'
 import PerfMonitor from './PerfMonitor'
 import GitHubPanel from './GitHubPanel'
 import SettingsPanel from './SettingsPanel'
+import GestaoPanel from './GestaoPanel'
 
 const EditorOverlay = dynamic(() => import('./EditorOverlay'), { ssr: false })
 const ChatPanel     = dynamic(() => import('./ChatPanel'),     { ssr: false })
@@ -37,6 +38,7 @@ export default function Game({ user, socket, onSwitchMode, onLogout }: GameProps
   const [claudeOpen, setClaudeOpen] = useState(false)
   const [perfOpen, setPerfOpen]     = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [gestaoOpen, setGestaoOpen] = useState(false)
 
   const displayName = user.name || user.username
   const isAdmin = user.username === 'phrigapov'
@@ -162,7 +164,7 @@ export default function Game({ user, socket, onSwitchMode, onLogout }: GameProps
     if (gameRef.current) {
       const mainScene = gameRef.current.scene.getScene('MainScene')
       if (mainScene) {
-        (mainScene as any).isPanelOpen = githubOpen || editorOpen || chatOpen || claudeOpen || settingsOpen
+        (mainScene as any).isPanelOpen = githubOpen || editorOpen || chatOpen || claudeOpen || settingsOpen || gestaoOpen
       }
     }
   }, [githubOpen, editorOpen, chatOpen, claudeOpen, settingsOpen])
@@ -171,7 +173,7 @@ export default function Game({ user, socket, onSwitchMode, onLogout }: GameProps
   useEffect(() => {
     const main = gameRef.current?.scene?.getScene('MainScene') as any
     if (!main?.input?.keyboard) return
-    const anyPanelOpen = githubOpen || editorOpen || chatOpen || claudeOpen || settingsOpen
+    const anyPanelOpen = githubOpen || editorOpen || chatOpen || claudeOpen || settingsOpen || gestaoOpen
     if (anyPanelOpen) {
       main.input.keyboard.disableGlobalCapture()
     } else {
@@ -186,10 +188,11 @@ export default function Game({ user, socket, onSwitchMode, onLogout }: GameProps
       if (e.key === '1') setChatOpen(o => !o)
       if (e.key === '2') setClaudeOpen(o => !o)
       if (e.key === '3') setGithubOpen(o => !o)
-      if (e.key === '4') {
+      if (e.key === '4') setGestaoOpen(o => !o)
+      if (e.key === '5') {
         editorOpen ? closeEditor() : openEditor()
       }
-      if (e.key === '5') setPerfOpen(o => !o)
+      if (e.key === '6') setPerfOpen(o => !o)
       if (e.key === 'Escape') setSettingsOpen(o => !o)
     }
     window.addEventListener('keydown', onKey)
@@ -220,6 +223,8 @@ export default function Game({ user, socket, onSwitchMode, onLogout }: GameProps
           onToggleClaude={isAdmin ? () => setClaudeOpen(o => !o) : undefined}
           githubOpen={githubOpen}
           onToggleGithub={() => setGithubOpen(o => !o)}
+          gestaoOpen={gestaoOpen}
+          onToggleGestao={() => setGestaoOpen(o => !o)}
           editorOpen={editorOpen}
           onOpenEditor={openEditor}
           onCloseEditor={closeEditor}
@@ -268,6 +273,11 @@ export default function Game({ user, socket, onSwitchMode, onLogout }: GameProps
             onClose={() => setGithubOpen(false)}
             defaultUsername={user.username}
           />
+        )}
+
+        {/* Painel de Gestao — tela cheia */}
+        {!isLoading && gestaoOpen && (
+          <GestaoPanel onClose={() => setGestaoOpen(false)} />
         )}
 
         {/* Painel de configuracoes */}
